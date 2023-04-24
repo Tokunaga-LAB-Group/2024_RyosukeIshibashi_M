@@ -1,4 +1,21 @@
-# networkXについて色々調査
+"""
+networkXを使用したグラフ生成周りをライブラリ化
+
+できること
+ノード数と接続距離を指定して生成したグラフの接続状況のみを取得する
+
+実装
+def dist(a, b): ab間のユークリッド距離を求める
+def distTorus(a, b, range): トーラス構造体上の点ab間の最短距離を求める トーラス構造体は非ユークリッド空間上の物体(内周と外周が同じ長さ)
+
+def convertCircle(pos): 今は使ってない
+
+def connect(G, a, b, pos, lam, selfLoop, c, seed): グラフG上のab間に接続を生む
+
+def makeGraph(N_x, lamb, seed): ノード数N_xのグラフの接続情報を生成
+
+"""
+
 
 import networkx as nx
 import numpy as np
@@ -67,7 +84,7 @@ def connect(G, a, b, pos, lam, selfLoop=0.05, c=1.0, seed=0):
     param G: 接続を行うグラフ
     param a: 接続を生みたいノードのkey 型はint
     param b: 接続を生みたいノードのkeyその2 型はint
-    param pos: 各ノードの位置を記録した行列
+    param pos: 各ノードの位置を記録した行列 add_pathの仕様上ノード番号(aとb)が必要
     param lam: 平均接続距離
     param selfLoop: 自己ループ結合確率
     param c: 接続率を操作する定数
