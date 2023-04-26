@@ -97,7 +97,7 @@ def connect(G, a, b, pos, lam, selfLoop=0.05, c=1.0, seed=0):
     p = C * math.exp(-distTorus(pos[a], pos[b], 1)**2 / lam**2)
 
     # 接続判定
-    # np.random.seed(seed)
+    np.random.seed(seed)
     if a == b : # 自己ループ結合を抑制
         if selfLoop > np.random.random_sample():
             nx.add_path(G, [a, b])
