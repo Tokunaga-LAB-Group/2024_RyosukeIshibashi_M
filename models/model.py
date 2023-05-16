@@ -4,11 +4,17 @@
 
 
 # 必要ライブラリ読み込み
+import sys
+import pathlib
+# 実行ファイルのあるディレクトリの絶対パスを取得
+current_dir = pathlib.Path(__file__).resolve().parent
+# モジュールのあるパスを追加
+sys.path.append( str(current_dir) + "\..\\" )
 import numpy as np
 import networkx as nx
 import math
 from tqdm import tqdm
-from ..orglib import graph_maker as gm
+from orglib import graph_maker as gm
 
 
 
