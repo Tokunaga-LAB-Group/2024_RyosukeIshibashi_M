@@ -21,13 +21,15 @@ if __name__ == "__main__":
     output_num = N_x if output_musk == None else len([x for x in output_musk if x != 0])
 
 
-    print(input_num, output_num)
+    # print(input_num, output_num)
 
 
     x_prime = x[np.nonzero(input_musk)]
-    print(x_prime)
+    # print(x_prime)
 
     x_in *= input_musk
-    print(x_in)
+    # print(x_in)
 
+    outputMusk = np.array([1 if i<32 else 0 for i in range(N_x)]) # 出力ノード数
+    print(outputMusk.shape, outputMusk, outputMusk.sum())
 
