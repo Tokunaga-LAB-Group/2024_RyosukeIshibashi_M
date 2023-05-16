@@ -8,6 +8,7 @@ import numpy as np
 import networkx as nx
 import math
 from tqdm import tqdm
+from ..orglib import graph_maker as gm
 
 
 
@@ -67,98 +68,10 @@ class Reservoir:
         self.alpha = leaking_rate
 
 
-    # ノード間の距離を求める
-    def dist(self, a, b):
-        '''
-        param a: 距離を求めたいノード 型はdict
-        param b: 距離を求めたいノードその2 型はdict
-        return: ノード間の距離
-        '''
-        return  np.linalg.norm(a-b)
-    
-    # 極座標変換する
-    def convertCircle(self, pos):
-        '''
-        直交座標を無理やり極座標にする(xをtheta, yをrとする)
-        param pos: 直交座標で表された座標
-        retrun: 極座標で表された座標
-        '''
-        retPos = {}
-        # 変換
-        for i, [theta, r] in pos.items():
-            # print(i, theta, r)
-            rad = 2 * math.pi * theta
-            x = math.sqrt(r) * math.cos(rad)
-            y = math.sqrt(r) * math.sin(rad)
-            retPos[i] = np.array([x, y], dtype=np.float32)
-
-        # print(retPos)
-        return retPos
-
-    # ノード間に接続を作ったり作らなかったり
-    def connect(self, G, a, b, pos, lamb, seed=0):
-        '''
-        param G: 接続を行うグラフ
-        param a: 接続を生みたいノードのkey 型はint
-        param b: 接続を生みたいノードのkeyその2 型はint
-        param pos: 各ノードの位置を記録した行列
-        param lam: 平均接続距離
-        param seed: 乱数のシード値
-        return: 接続を増やしたりしたグラフG
-        '''
-        C = 1 # ある距離内でどのくらい接続するか設定する定数
-
-        # 接続確率計算
-        p = C * math.exp(-self.dist(pos[a], pos[b])**2 / lamb**2)
-
-        # 接続判定
-        # np.random.seed(seed)
-        if a == b : # 自己ループ結合を抑制
-            if 0.05 > np.random.random_sample():
-                nx.add_path(G, [a, b])
-        else:
-            if p > np.random.random_sample():
-                nx.add_path(G, [a, b])
-
-        return G
-
-    def makeGraph(self, N_x, lamb, seed=0):
-        '''
-        param N_x: ノード数
-        param lamb: 平均接続距離
-        param seed: 乱数のシード値
-        '''
-
-        # 空のグラフ生成
-        G = nx.empty_graph(N_x, nx.DiGraph)
-
-        # レイアウトの取得
-        pos = nx.random_layout(G, seed=seed)
-        pos = self.convertCircle(pos)
-        # print(pos)
-
-        # distAll = []
-        # 接続する
-        for i in tqdm(range(N_x)):
-            for j in range(N_x):
-                self.connect(G, i, j, pos, lamb)
-                # lambda:0.240 ~ density:0.05
-                # lambda:0.350 ~ density:0.10
-                # lambda:0.440 ~ density:0.15
-                # distAll.append(dist(pos[i], pos[j]))
-
-        # distAll = np.array(distAll)
-        # print(distAll.shape, distAll.mean(), distAll.max(), distAll.min())
-
-        # nx.draw(G, pos, node_size=20, arrowsize=3)
-        # plt.show()
-
-        return G
-
     # リカレント結合重み行列の生成
     def make_connection(self, N_x, lamb, rho):
         # 距離を考慮したリザバー結合
-        G = self.makeGraph(N_x, lamb)
+        G = gm.makeGraph(N_x, lamb, self.seed)
         print("density =" , nx.density(G))
 
         # 行列への変換(結合構造のみ)
