@@ -111,11 +111,10 @@ class Reservoir:
 # 出力層
 class Output:
     # 出力結合重み行列の初期化
-    def  __init__(self, N_x, N_y, input_num, output_num, seed=0):
+    def  __init__(self, N_x, N_y, output_num, seed=0):
         '''
         param N_x: リザバーのノード数
         param N_y: 出力次元
-        param input_num: 入力ノード数(ノード調整のために必要)
         param output_num: 出力ノード数
         '''
         # 正規分布に従う乱数
@@ -123,8 +122,8 @@ class Output:
         self.Wout = np.random.normal(size=(N_y, output_num))
 
         # 出力ノード設定
-        self.input_num = input_num
-        self.output_num = output_num
+        # self.input_num = input_num
+        # self.output_num = output_num
         # print(self.Wout.shape, np.count_nonzero(self.Wout == 0)) # デバッグ用
         # self.Wout[:, :self.input_num] = 0
         # self.Wout[:, self.input_num + self.output_num:] = 0
@@ -296,8 +295,8 @@ class ESN:
                 inv_output_func = identify,
                 classification = False,
                 average_window = None,
-                input_num = 64,
-                output_num = 192
+                input_musk = None,
+                output_musk = None
                 ):
         '''
         param N_u: 入力次元
@@ -319,7 +318,10 @@ class ESN:
         '''
         self.Input = Input(N_u, N_x, input_scale)
         self.Reservoir = Reservoir(N_x, lamb, rho, activation_func, leaking_rate)
-        self.Output = Output(N_x, N_y, input_num, output_num)
+        # 要素が0以外の数を与える
+        input_num = N_x if input_musk == None else np.sum(input_musk)
+        output_num = N_x if output_musk == None else np.sum(output_musk)
+        self.Output = Output(N_x, N_y, output_num)
         self.N_u = N_u
         self.N_y = N_y
         self.N_x = N_x
@@ -327,14 +329,14 @@ class ESN:
         self.output_func = output_func
         self.inv_output_func = inv_output_func
         self.classification = classification
-        self.input_num = input_num
-        self.output_num = output_num
+        self.input_musk = input_musk
+        self.output_musk = output_musk
         self.params = {"N_u":N_u, "N_y":N_y, "N_x":N_x, "lamb":lamb, "input_scale":input_scale, 
                         "rho":rho, "activation_func":activation_func, 
                         "fb_scale":fb_scale, "fb_seed":fb_seed, "leaking_rate":leaking_rate, 
                         "output_func":output_func, "inv_output_func":inv_output_func, 
                         "classification":classification, "average_window":average_window,
-                        "input_num":input_num, "output_num":output_num}
+                        "input_musk":input_musk, "output_musk":output_musk}
 
         # 出力層からリザバーへのフィードバックの有無
         if fb_scale is None:
@@ -391,12 +393,18 @@ class ESN:
                 # self.noise[self.input_num:] = 0
                 x_in += self.noise
             
+
+            # 絞込みをマスク行列で行うように変更
             # 入力の絞り込み
-            x_in[self.input_num:] = 0
+            if self.input_musk != None:
+                x_in *= self.input_musk
             # リザバー状態ベクトル
             x = self.Reservoir(x_in)
             # 出力の絞り込み
-            x_prime = x[self.input_num : self.input_num+self.output_num]
+            if self.output_musk != None:
+                x_prime = x[np.nonzero(self.output_musk)]
+            else:
+                x_prime = x
 
             # 分類問題の場合は窓幅分の平均を取得
             if self.classification:
@@ -409,6 +417,7 @@ class ESN:
             d = self.inv_output_func(d)
 
             # 学習器
+            # 学習前の値にマスクを掛けておく
             if n > trans_len: # 過渡期を過ぎたら
                 if period[n] == 1: # 学習可能区間なら
                     optimizer(d, x_prime)
