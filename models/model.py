@@ -216,7 +216,7 @@ class Pseudoinv:
 
 # リッジ回帰(beta=0の時は線形回帰)
 class Tikhonov:
-    def __init__(self, N_x, N_y, output_num, beta):
+    def __init__(self, N_x, N_y, output_musk, beta):
         '''
         param N_x: リザバーのノード数
         param N_y: 出力次元
@@ -224,6 +224,10 @@ class Tikhonov:
         param beta: 正則化パラメータ
         '''
         self.beta = beta
+        if output_musk != None:
+            output_num = np.sum(output_musk)
+        else:
+            output_num = N_x
         self.X_XT = np.zeros((output_num, output_num))
         self.D_XT = np.zeros((N_y, output_num))
         self.N_x = N_x
@@ -456,12 +460,15 @@ class ESN:
                 x_in += x_back
             
             # 入力の絞り込み
-            x_in[self.input_num:] = 0
+            if self.input_musk != None:
+                x_in *= self.input_musk
             # リザバー状態ベクトル
             x = self.Reservoir(x_in)
             # 出力の絞り込み
-            x_prime = x[self.input_num : self.input_num+self.output_num]
-
+            if self.output_musk != None:
+                x_prime = x[np.nonzero(self.output_musk)]
+            else:
+                x_prime = x
 
             # 分類問題の場合は窓幅分の平均を取得
             if self.classification:
