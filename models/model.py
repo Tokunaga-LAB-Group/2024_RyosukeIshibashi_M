@@ -80,7 +80,7 @@ class Reservoir:
 
         # 非ゼロ要素を一様分布に従う乱数として生成
         rec_scale = 1.0
-        np.random.seed(seed = self.seed)
+        np.random.seed(seed = self.seed*self.seed)
         W *= np.random.uniform(-rec_scale, rec_scale, (N_x, N_x))
 
         # スペクトル半径の計算
@@ -95,7 +95,7 @@ class Reservoir:
     # リザバー状態ベクトルの更新
     def __call__(self, x_in):
         '''
-        param x_in: 更新前の状態ベクトル
+        param x_in: リザバーへの入力層からの入力
         return: 更新後の状態ベクトル
         '''
         # self.x = self.x.reshape(-1, 1)
