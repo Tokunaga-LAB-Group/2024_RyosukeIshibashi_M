@@ -61,7 +61,7 @@ def readCsvWithCorrection(filename, tgt):
 # 一度にデータ読み込んでついでに値も渡す
 def readCsvAll(fnames, tgt, seed=917):
     """
-    param filename: ファイル名のリスト
+    param filename: ディレクトリを含むファイル名のリスト
     param tgt: Fを参照する時刻
     param seed: データシャッフル時のシード値 Noneを与えるとシャッフルしない
     return: 前処理したデータ，入力値，それぞれの入力値ごとの平均，標準偏差
@@ -72,7 +72,7 @@ def readCsvAll(fnames, tgt, seed=917):
     inputDatasLabel = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
     inputDatas = np.empty(0)
     for fname in fnames:
-        data = readCsvWithCorrection("../input/" + fname, tgt)
+        data = readCsvWithCorrection(fname, tgt)
         csvDatas = np.append(csvDatas, data, axis=0)
         csvDatasMean[fname.split("_")[1]] = np.mean(data, axis=0)
         csvDatasStd[fname.split("_")[1]] = np.std(data, axis=0)

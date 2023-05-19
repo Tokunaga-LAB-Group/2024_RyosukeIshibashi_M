@@ -26,6 +26,8 @@ def getArg():
     parser = argparse.ArgumentParser(description="ESN Reproduction")
 
     # 入力解析とデータ格納
+    parser.add_argument("--csv_filepath", type=str, required=True,
+                        help="CSV file path")
     parser.add_argument("--csv_fliename", type=list(str), required=True, 
                         help="List of CSV file name.")
     parser.add_argument("--data_length", type=int, required=True,
@@ -79,8 +81,9 @@ def main():
         periodValue = args.train_period_value
         periodDura = args.train_period_duration
         trainPeriod = md.makeSquareWave(periodValue, periodDura)
-    csvFname = args.csv_filename
-    TEST = args.testdata # ここ関連は要修正
+    csvFname = []
+    for fname in args.csv_filename:
+        csvFname.append(args.csv_filepath + fname)
 
     if args.figure_save_path is None:
         saveFig = False # 出力を保存するか否か
