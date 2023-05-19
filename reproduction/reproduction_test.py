@@ -93,42 +93,20 @@ def main():
     trainData = []
     trainLabel = []
     csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300)
-    # csvData = readCsv("../input/" + csvFname[0], 300)
     datas = []
     for data, input in zip(csvData, inputData): # 全データを一つにしてみる
-        # if i in [3, 5 ,11, 12, 20, 22]: # ノイズになりそうなデータを排除
-        #     continue
         datas.append(data.copy())
         trainData.extend(data.copy())
         value = [x * input + BIAS for x in TRAIN_VALUE]
         trainLabel.extend(md.makeDiacetylData(value, TRAIN_DURATION))
-        # trainLabel.extend(makeLabel([x - BIAS for x in TRAIN_VALUE], TRAIN_DURATION))
     trainData = np.array(trainData).reshape(-1, 1)
     trainLabel = np.array(trainLabel).reshape(-1, 1)
     trainPeriod = np.tile(trainPeriod, len(datas))
-    # print(trainPeriod.shape, trainPeriod)
-    # trainData = np.array(trainData) * 0.01
-    # trainLabel, trainData = md.makeDatasetWithWindow(trainLabel, trainData, 25)
-    # print(trainLabel.shape, trainData.shape)
-    # trainData = readCsv("input/data.csv")[12].reshape(-1, 1)
-    # trainLabel = md.makeDiacetylData(VALUE, DURATION).reshape(-1, 1)
 
     # テストデータ
-    # testData = csvData[3].reshape(-1, 1)
-    # testData = np.mean(csvData, axis=0).reshape(-1, 1) * 0.01
-    # testData = np.mean(datas, axis=0).reshape(-1, 1)
-    # testDataStd = np.std(datas, axis=0).reshape(-1, 1)
-    # testLabel = md.makeDiacetylData(TEST_VALUE, TEST_DURATION).reshape(-1, 1)
-    testData = csvDatasMean[TEST].reshape(-1, 1)
-    testDataStd = csvDatasStd[TEST].reshape(-1, 1)
     inputLabel = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
     testValue = [x * inputLabel[TEST] + BIAS for x in TEST_VALUE]
     testLabel = md.makeDiacetylData(testValue, TEST_DURATION).reshape(-1, 1)
-    # testLabel = makeLabel([x - BIAS for x in TEST_VALUE], TEST_DURATION)
-    # testData = np.mean(datas, axis=0) * 0.01
-    # testLabel = md.makeDiacetylData(TEST_VALUE, TEST_DURATION)
-    # testLabel, testData = md.makeDatasetWithWindow(testLabel, testData, 25)
-    # print(testData.shape)
 
 
 
