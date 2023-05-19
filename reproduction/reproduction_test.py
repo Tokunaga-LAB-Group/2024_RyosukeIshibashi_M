@@ -84,6 +84,7 @@ def main():
     csvFname = []
     for fname in args.csv_filename:
         csvFname.append(args.csv_filepath + fname)
+    TEST = args.testdata
 
     if args.figure_save_path is None:
         saveFig = False # 出力を保存するか否か
@@ -108,7 +109,15 @@ def main():
 
     # テストデータ
     inputLabel = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
-    testValue = [x * inputLabel[TEST] + BIAS for x in TEST_VALUE]
+    testData = []
+    testDataStd = []
+    testValue = []
+    if TEST is None: # テスト対象未指定なら全部でやる
+        TEST = ["10-5", "10-6", "10-7", "10-8", "10-9", "0"]
+    for test in TEST:
+        testData.extend(csvDatasMean[test].reshape(-1, 1))
+        testDataStd.extend(csvDatasStd[test].reshape(-1, 1))
+        testValue.extend([x * inputLabel[test] + BIAS for x in TEST_VALUE])
     testLabel = md.makeDiacetylData(testValue, TEST_DURATION).reshape(-1, 1)
 
 
