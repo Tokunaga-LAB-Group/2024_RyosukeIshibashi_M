@@ -5,7 +5,7 @@ import pathlib
 # 実行ファイルのあるディレクトリの絶対パスを取得
 current_dir = pathlib.Path(__file__).resolve().parent
 # モジュールのあるパスを追加
-sys.path.append( str(current_dir) + "\..\\" )
+sys.path.append( str(current_dir) + "/../" )
 import argparse
 import os
 import time
@@ -28,32 +28,50 @@ def getArg():
     # 入力解析とデータ格納
     parser.add_argument("--csv_filepath", type=str, required=True,
                         help="CSV file path")
-    parser.add_argument("--csv_fliename", type=list(str), required=True, 
+    parser.add_argument("--csv_filename", nargs="*", type=str, required=True, 
                         help="List of CSV file name.")
     parser.add_argument("--data_length", type=int, required=True,
                         help="Length of a data")
     parser.add_argument("--bias", type=float, default=0.1,
                         help="Data bias")
-    parser.add_argument("--train_value", type=list(float), required=True,
+    parser.add_argument("--train_value", nargs="*", type=float, required=True,
                         help="List of train data values")
-    parser.add_argument("--train_duration", type=list(int), required=True,
+    parser.add_argument("--train_duration", nargs="*", type=int, required=True,
                         help="List of train data duration")
-    parser.add_argument("--test_value", type=list(float), required=True,
+    parser.add_argument("--test_value", nargs="*", type=float, required=True,
                         help="List of test data values")
-    parser.add_argument("--tset_duration", type=list(int), required=True,
+    parser.add_argument("--test_duration", nargs="*", type=int, required=True,
                         help="List of test data duration")
     parser.add_argument("--transition_length", type=int, default=None,
                         help="Length of transition period")
-    parser.add_argument("--train_period_value", type=list(int), default=None,
+    parser.add_argument("--train_period_value", nargs="*", type=int, default=None,
                         help="List of train section. Value 0 is not train to model")
-    parser.add_argument("--train_period_duration", type=list(int), default=None,
+    parser.add_argument("--train_period_duration", nargs="*", type=int, default=None,
                         help="List of train section duration")
-    parser.add_argument("--test_name", type=list(str), default=None,
+    parser.add_argument("--test_name", nargs="*", type=str, default=None,
                         help="List of test data name that for training")
     parser.add_argument("--figure_save_path", type=str, default=None,
                         help="Path name for saving. No assignment to not saving")
     parser.add_argument("--figure_save_name", type=str, default=None,
                         help="Figuer name to result. No assignment to not saving")
+
+    parser.add_argument("--N_x", type=int, required=True,
+                        help="Number of node in Reservoir")
+    parser.add_argument("--input_scale", type=float, default=1.0,
+                        help="Scaling rate of input data")
+    parser.add_argument("--lamb", type=float, default=0.24,
+                        help="Average distance of connection between nodes")
+    parser.add_argument("--rho", type=float, required=True,
+                        help="Spectral Radius setpoints")
+    parser.add_argument("--leaking_rate", type=float, required=True,
+                        help="Value of reaking late")
+    parser.add_argument("--feedback_scale", type=float, default=None,
+                        help="Feedback rate of reservoir state")
+    parser.add_argument("--noise_level", type=float, default=None,
+                        help="Noise level of input data")
+    parser.add_argument("--tikhonov_beta", type=float, default=0.01,
+                        help="Regularization parameter for Ridge regression")
+    
 
 
     # 解析結果を返す
@@ -66,7 +84,7 @@ def main():
     # データ生成
 
     # 諸々のパラメータ
-    DATALEN = args.data_len # 全体のデータ長
+    DATALEN = args.data_length # 全体のデータ長
     BIAS = args.bias # 定常状態用
     # TRAIN_VALUE = [x + BIAS for x in [0, 1, 0]] # 値
     TRAIN_VALUE = args.train_value
@@ -74,7 +92,7 @@ def main():
     # TEST_VALUE = [x + BIAS for x in [0, 1, 0, 1, 0]]
     TEST_VALUE = args.test_value
     TEST_DURATION = args.test_duration
-    transLen = args.transtion_length
+    transLen = args.transition_length
     if args.train_period_value is None:
         trainPeriod = None
     else:
@@ -84,7 +102,7 @@ def main():
     csvFname = []
     for fname in args.csv_filename:
         csvFname.append(args.csv_filepath + fname)
-    TEST = args.testdata
+    TEST = args.test_name
 
     if args.figure_save_path is None:
         saveFig = False # 出力を保存するか否か
@@ -105,7 +123,7 @@ def main():
         trainLabel.extend(md.makeDiacetylData(value, TRAIN_DURATION))
     trainData = np.array(trainData).reshape(-1, 1)
     trainLabel = np.array(trainLabel).reshape(-1, 1)
-    trainPeriod = np.tile(trainPeriod, len(datas))
+    trainPeriod = np.tile(trainPeriod, len(datas)) if trainPeriod is not None else None
 
     # テストデータ
     inputLabel = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
@@ -118,31 +136,35 @@ def main():
         testData.extend(csvDatasMean[test].reshape(-1, 1))
         testDataStd.extend(csvDatasStd[test].reshape(-1, 1))
         testValue.extend([x * inputLabel[test] + BIAS for x in TEST_VALUE])
+    # numpy配列へ変換
+    testData = np.array(testData)
+    testDataStd = np.array(testDataStd)
+    testValue = np.array(testValue)
     testLabel = md.makeDiacetylData(testValue, TEST_DURATION).reshape(-1, 1)
 
 
 
     # モデル生成
-    N_x = 400 # ノード数
-    inputMusk  = [1 if i<32  else 0 for i in range(N_x)] # 入力ノード(1 が有効，0 が無効)
-    outputMusk = [1 if i<256 else 0 for i in range(N_x)] # 出力ノード
+    N_x = args.N_x # ノード数
+    inputMask  = [1 if i<32  else 0 for i in range(N_x)] # 入力ノード(1 が有効，0 が無効)
+    outputMask = [1 if i<256 else 0 for i in range(N_x)] # 出力ノード
     # lambda:0.240 ~ density:0.05
     # lambda:0.350 ~ density:0.10
     # lambda:0.440 ~ density:0.15
-    model = ESN(trainLabel.shape[1], trainData.shape[1], N_x, lamb=0.24,
-                input_scale=1, 
-                rho=0.9,
-                # fb_scale=1e-3,
+    model = ESN(trainLabel.shape[1], trainData.shape[1], N_x, lamb=args.lamb,
+                input_scale=args.input_scale, 
+                rho=args.rho,
+                fb_scale=args.feedback_scale,
                 fb_seed=99,
-                leaking_rate=0.1,
-                # noise_level=0.1,
-                input_musk=inputMusk,
-                output_musk=outputMusk)
+                leaking_rate=args.leaking_rate,
+                noise_level=args.noise_level,
+                input_mask=inputMask,
+                output_mask=outputMask)
 
 
     # 学習
     trainY = model.train(trainLabel, trainData,
-                        Tikhonov(N_x, trainData.shape[1], outputMusk, 0.01),
+                        Tikhonov(N_x, trainData.shape[1], outputMask, args.tikhonov_beta),
                         trans_len=transLen,
                         period=trainPeriod)
 
@@ -354,6 +376,6 @@ def main():
 
 
 
-if __name__ is "__main__":
+if __name__ == "__main__":
     args = getArg()
     main()
