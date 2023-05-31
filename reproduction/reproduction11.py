@@ -8,7 +8,7 @@ import pathlib
 # 実行ファイルのあるディレクトリの絶対パスを取得
 current_dir = pathlib.Path(__file__).resolve().parent
 # モジュールのあるパスを追加
-sys.path.append( str(current_dir) + "\..\\" )
+sys.path.append( str(current_dir) + "/../" )
 import os
 import time
 import csv
@@ -40,12 +40,12 @@ if __name__ == "__main__":
     transVal = [1] * transLen # 過渡期用の値
     trainPeriod = np.concatenate(([1]*100, [1]*500, [1]*100))
     csvFname = [
-        "data_10-5_N2_300.csv", 
-        "data_10-6_N2_300.csv", 
-        "data_10-7_N2_300.csv", 
-        "data_10-8_N2_300.csv", 
-        "data_10-9_N2_300.csv", 
-        "data_0_N2_300.csv"
+        "./input/data_10-5_N2_300.csv", 
+        "./input/data_10-6_N2_300.csv", 
+        "./input/data_10-7_N2_300.csv", 
+        "./input/data_10-8_N2_300.csv", 
+        "./input/data_10-9_N2_300.csv", 
+        "./input/data_0_N2_300.csv"
         ]
     TEST = "10-5"
 
