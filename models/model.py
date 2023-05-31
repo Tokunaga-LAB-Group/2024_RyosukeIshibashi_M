@@ -216,7 +216,7 @@ class Pseudoinv:
 
 # リッジ回帰(beta=0の時は線形回帰)
 class Tikhonov:
-    def __init__(self, N_x, N_y, output_musk, beta):
+    def __init__(self, N_x, N_y, output_mask, beta):
         '''
         param N_x: リザバーのノード数
         param N_y: 出力次元
@@ -224,8 +224,8 @@ class Tikhonov:
         param beta: 正則化パラメータ
         '''
         self.beta = beta
-        if output_musk != None:
-            output_num = np.sum(output_musk)
+        if output_mask != None:
+            output_num = np.sum(output_mask)
         else:
             output_num = N_x
         self.X_XT = np.zeros((output_num, output_num))
@@ -305,8 +305,8 @@ class ESN:
                 inv_output_func = identify,
                 classification = False,
                 average_window = None,
-                input_musk = None,
-                output_musk = None
+                input_mask = None,
+                output_mask = None
                 ):
         '''
         param N_u: 入力次元
@@ -329,8 +329,8 @@ class ESN:
         self.Input = Input(N_u, N_x, input_scale)
         self.Reservoir = Reservoir(N_x, lamb, rho, activation_func, leaking_rate)
         # 要素が0以外の数を与える
-        input_num = N_x if input_musk == None else np.sum(input_musk)
-        output_num = N_x if output_musk == None else np.sum(output_musk)
+        input_num = N_x if input_mask == None else np.sum(input_mask)
+        output_num = N_x if output_mask == None else np.sum(output_mask)
         self.Output = Output(N_x, N_y, output_num)
         self.N_u = N_u
         self.N_y = N_y
@@ -339,14 +339,14 @@ class ESN:
         self.output_func = output_func
         self.inv_output_func = inv_output_func
         self.classification = classification
-        self.input_musk = input_musk
-        self.output_musk = output_musk
+        self.input_mask = input_mask
+        self.output_mask = output_mask
         self.params = {"N_u":N_u, "N_y":N_y, "N_x":N_x, "lamb":lamb, "input_scale":input_scale, 
                         "rho":rho, "activation_func":activation_func, 
                         "fb_scale":fb_scale, "fb_seed":fb_seed, "leaking_rate":leaking_rate, 
                         "output_func":output_func, "inv_output_func":inv_output_func, 
                         "classification":classification, "average_window":average_window,
-                        "input_musk":input_musk, "output_musk":output_musk}
+                        "input_mask":input_mask, "output_mask":output_mask}
 
         # 出力層からリザバーへのフィードバックの有無
         if fb_scale is None:
@@ -406,13 +406,13 @@ class ESN:
 
             # 絞込みをマスク行列で行うように変更
             # 入力の絞り込み
-            if self.input_musk != None:
-                x_in *= self.input_musk
+            if self.input_mask != None:
+                x_in *= self.input_mask
             # リザバー状態ベクトル
             x = self.Reservoir(x_in)
             # 出力の絞り込み
-            if self.output_musk != None:
-                x_prime = x[np.nonzero(self.output_musk)]
+            if self.output_mask != None:
+                x_prime = x[np.nonzero(self.output_mask)]
             else:
                 x_prime = x
 
@@ -460,13 +460,13 @@ class ESN:
                 x_in += x_back
             
             # 入力の絞り込み
-            if self.input_musk != None:
-                x_in *= self.input_musk
+            if self.input_mask != None:
+                x_in *= self.input_mask
             # リザバー状態ベクトル
             x = self.Reservoir(x_in)
             # 出力の絞り込み
-            if self.output_musk != None:
-                x_prime = x[np.nonzero(self.output_musk)]
+            if self.output_mask != None:
+                x_prime = x[np.nonzero(self.output_mask)]
             else:
                 x_prime = x
 

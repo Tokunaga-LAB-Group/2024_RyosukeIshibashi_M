@@ -193,13 +193,12 @@ class InvSinData():
 		return self.dataRMSE(pred) / np.sqrt(np.var(pred))
 
 
-
-# 線虫用のデータ生成関数
-def makeDiacetylData(conc, dura):
+# 矩形波生成関数
+def makeSquareWave(conc, dura):
 	'''
-	param conc: concentration, 濃度, リストで与える
-	param dura: duration, 持続時間, リストで与える
-	return: ジアセチル水溶液の濃度変化をシミュレーションした値
+	param conc: concentration, 矩形波の大きさ, リストで与える
+	param dura: duration, 矩形波の長さ, リストで与える
+	return: 矩形波
 	'''
 	data = []
 	for c, d in zip(conc, dura):
@@ -207,6 +206,14 @@ def makeDiacetylData(conc, dura):
 		data.extend(work)
 	
 	return np.array(data)
+# 線虫用のデータ生成関数
+def makeDiacetylData(conc, dura):
+	'''
+	param conc: concentration, 濃度, リストで与える
+	param dura: duration, 持続時間, リストで与える
+	return: ジアセチル水溶液の濃度変化をシミュレーションした値
+	'''
+	return makeSquareWave(conc, dura)
 # データ生成の別バージョン
 def makeDiacetylData2(source):
 	'''
