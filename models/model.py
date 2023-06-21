@@ -13,6 +13,7 @@ sys.path.append( str(current_dir) + "\..\\" )
 import numpy as np
 import networkx as nx
 import math
+from typing import List # 型指定用，v3.9からは非推奨
 from tqdm import tqdm
 from orglib import graph_maker as gm
 
@@ -62,15 +63,20 @@ class Reservoir:
     def __init__(self, N_x, lamb, rho, activation_func, leaking_rate, seed=0):
         '''
         param N_x: リザバーのノード数
-        param density: ネットワークの結合密度
+        param lamb: ネットワークの平均結合距離
         param rho: リカレント結合重み行列のスペクトル半径
         param activation_func: ノードの活性化関数(式をそのまま渡す)
         param leaking_rate: leaky integratorモデルのリーク率(時間スケール)
         '''
         self.seed = seed
+        self.N_x = N_x
+        self.lamb = lamb
+        self.rho = rho
+        self.activation_func = activation_func
+        self.leaking_rate = leaking_rate # 重複しているが，表記ゆれをなくすため
+        self.seed = seed
         self.W = self.make_connection(N_x, lamb, rho) # リカレント結合重み行列の生成
         self.x = np.zeros(N_x) # リザバー状態ベクトルの初期化
-        self.activation_func = activation_func
         self.alpha = leaking_rate
 
 
@@ -558,4 +564,347 @@ class ESN:
 
 
 
+# エコーステートネットワーク(ESN)
+# マルチリザバー化
+# 外部でリザバー層作って，それを引数として受け取る
+class ESNs: 
+    # 各層の初期化
+    def __init__(self, N_u, N_y,
+                reservoirs:List[Reservoir] = None, # インテリセンスを動作させるため
+                reservoir_num = 2,
+                input_scale = 1.0, 
+                fb_scale = None, fb_seed = 0, 
+                noise_level = None,
+                output_func = identify,
+                inv_output_func = identify,
+                classification = False,
+                average_window = None,
+                input_mask = None,
+                output_mask = None
+                ):
+        '''
+        param N_u: 入力次元
+        param N_y: 出力次元
+        param reservoirs: リザバー層，複数指定可能
+        param reservoir_num: リザバー層の数
+        param input_scale: 入力スケーリング
+        param fb_scale: フィードバックスケーリング
+        param fb_seed: フィードバック結合重み行列に使う乱数のシード値
+        param noise_level: 入力に対するノイズの大きさ Noneでノイズを与えない
+        param output_func: 出力層の非線形関数
+        param inv_output_func: output_funcの逆関数←何に使うの...?
+        param classification: 分類問題の場合はtrue
+        param average_window: 分類問題で平均出力する窓幅
+        param input_mask: 入力ノードを絞り込むリスト 0:出力しない 1:出力する
+        param output_mask: 出力ノードを絞り込むリスト 0:出力しない 1:出力する
+        '''
+
+        if reservoirs is None:
+            print("error: no exist Reservoir layer!")
+            return
+        
+        # 諸々記録用
+        input_sum = 0
+        output_sum = 0
+        N_x_sum = 0
+        p_N_x = []
+        p_lamb = []
+        p_rho = []
+        p_activation_func = []
+        p_leaking_rate = []
+
+        # 各層初期設定
+        self.Input = []
+        self.Reservoirs = []
+        self.N_x = []
+        self.Feedback = []
+        self.noise = []
+        self.window = []
+        seed_delta = 1
+        for res in reservoirs:
+            # 入力層
+            self.Input.append(Input(N_u, res.N_x, input_scale))
+
+            # リザバー層
+            self.Reservoirs.append(res)
+
+            # 要素が0以外の数を与える
+            input_sum = res.N_x if input_mask == None else np.sum(input_mask)
+            output_sum += res.N_x if output_mask == None else np.sum(output_mask)
+            self.N_x.append(res.N_x)
+            N_x_sum += res.N_x
+
+
+            # 出力層からリザバーへのフィードバックの有無
+            if fb_scale is None:
+                self.Feedback = None
+            else:
+                self.Feedback.append(Feedback(N_y, res.N_x, fb_scale, fb_seed + res.seed + seed_delta))
+                seed_delta += 1
+
+            # リザバーの状態更新におけるノイズの有無
+            if noise_level is None:
+                self.noise = None
+            else:
+                np.random.seed(seed=res.seed + seed_delta)
+                seed_delta += 1
+                self.noise.append(np.random.uniform(-noise_level, noise_level, (res.N_x)))
+
+            # 分類問題か否か
+            if classification:
+                if average_window is None:
+                    raise ValueError("Window for time average is not given!")
+                else:
+                    self.window.append(np.zeros((average_window, res.N_x)))
+
+            # 情報記録
+            p_N_x.append(res.N_x)
+            p_lamb.append(res.lamb)
+            p_rho.append(res.rho)
+            p_activation_func.append(res.activation_func)
+            p_leaking_rate.append(res.leaking_rate)
+
+
+        # リードアウト層(リードアウト層は一つ)
+        self.Output = Output(N_x_sum, N_y, output_sum)
+
+        self.N_u = N_u
+        self.N_y = N_y
+        self.y_prev = np.zeros(N_y)
+        self.output_func = output_func
+        self.inv_output_func = inv_output_func
+        self.classification = classification
+        self.input_mask = input_mask
+        self.output_mask = output_mask
+        self.reservoir_num = reservoir_num
+
+
+        # 情報記録用
+        self.params = {"N_u":N_u, "N_y":N_y, "N_x":p_N_x, "lamb":p_lamb, "input_scale":input_scale, 
+                        "rho":p_rho, "activation_func":p_activation_func, 
+                        "fb_scale":fb_scale, "fb_seed":fb_seed, "leaking_rate":p_leaking_rate, 
+                        "output_func":output_func, "inv_output_func":inv_output_func, 
+                        "classification":classification, "average_window":average_window,
+                        "input_mask":input_mask, "output_mask":output_mask, "reservoir_num":reservoir_num}
+
+
+
+    # バッチ学習
+    def train(self, U, D, optimizer, trans_len = None, period = None):
+        '''
+        param U: 教師データの入力，データ長*N_u
+        param D: 教師データの出力，データ長*N_y
+        param optimizer: 学習器
+        param trans_len: 過渡期の長さ
+        param period: 学習区間(0,1のリストで与える)
+        return: 学習前のモデル出力，データ長*N_y
+        '''
+        train_len = len(U)
+        if trans_len is None:
+            trans_len = 0 # デフォルトで0にすればいいのでは？
+        if period is None:
+            period = [1] * train_len
+        Y = []
+
+        # 時間発展
+        for n in tqdm(range(train_len)):
+
+            # 各リザバーを1ステップごとに更新
+            x_pre = [] # 学習用データ？
+            #ここから###########################
+            for i in range(self.reservoir_num):
+                x_in = self.Input[i](U[n])
+
+                # フィードバック結合
+                if self.Feedback is not None:
+                    x_back = self.Feedback[i](self.y_prev)
+                    # x_back[self.input_num:] = 0
+                    # print(x_in.shape, x_back.shape)
+                    x_in += x_back
+
+                # ノイズ
+                if self.noise is not None:
+                    # print(x_in.shape, self.noise.shape)
+                    # self.noise[self.input_num:] = 0
+                    x_in += self.noise[i]
+
+
+                # 絞込みをマスク行列で行うように変更
+                # 入力の絞り込み
+                if self.input_mask != None:
+                    x_in *= self.input_mask
+                # リザバー状態ベクトル
+                x = self.Reservoirs[i](x_in)
+                # 出力の絞り込み
+                if self.output_mask != None:
+                    x_prime = x[np.nonzero(self.output_mask)]
+                else:
+                    x_prime = x
+
+                # 分類問題の場合は窓幅分の平均を取得
+                if self.classification:
+                    self.window[i] = np.append(self.window[i], x_prime.reshape(1, -1), axis = 0)
+                    self.window[i] = np.delete(self.window[i], 0, 0)
+                    x_prime = np.average(self.window[i], axis = 0)
+
+                # 学習用データに追加
+                x_pre.extend(x_prime)
+
+            #ここまで#####################################
+            
+
+            # 目標値
+            d = D[n]
+            d = self.inv_output_func(d)
+
+
+            # 学習器
+            # 学習前の値にマスクを掛けておく
+            if n > trans_len: # 過渡期を過ぎたら
+                if period[n] == 1: # 学習可能区間なら
+                    optimizer(d, x_pre)
+            
+            # 学習前のモデル出力
+            y = self.Output(x_pre)
+            Y.append(self.output_func(y))
+            self.y_prev = d
+        
+        # 学習済みの出力結合重み行列を設定
+        self.Output.setweight(optimizer.get_Wout_opt())
+
+        # モデル出力
+        return np.array(Y)
+
+
+
+    # バッチ学習後の予測
+    def predict(self, U):
+        '''
+        param U: 入力データ
+        return: 予測した値
+        '''
+        test_len = len(U)
+        Y_pred = []
+
+        # 時間発展
+        for n in range(test_len):
+
+            # 各リザバーを1ステップごとに更新
+            x_pre = [] # 学習用データ？
+
+            #ここから###########################
+            for i in range(self.reservoir_num):
+                x_in = self.Input[i](U[n])
+
+                # フィードバック結合
+                if self.Feedback is not None:
+                    # print(self.y_prev.shape)
+                    x_back = self.Feedback[i](self.y_prev)
+                    # x_back[self.input_num:] = 0
+                    x_in += x_back
+
+                # 入力の絞り込み
+                if self.input_mask != None:
+                    x_in *= self.input_mask
+                # リザバー状態ベクトル
+                x = self.Reservoirs[i](x_in)
+                # 出力の絞り込み
+                if self.output_mask != None:
+                    x_prime = x[np.nonzero(self.output_mask)]
+                else:
+                    x_prime = x
+
+                # 分類問題の場合は窓幅分の平均を取得
+                if self.classification:
+                    self.window[i] = np.append(self.window[i], x_prime.reshape(1, -1), axis = 0)
+                    self.window[i] = np.delete(self.window[i], 0, 0)
+                    x_prime = np.average(self.window[i], axis = 0)
+
+                # 学習用データに追加
+                x_pre.extend(x_prime)
+
+            #ここまで#####################################
+
+
+            # 学習後のモデル出力
+            # print(x.shape)
+            y_pred = self.Output(x_pre)
+            Y_pred.append(self.output_func(y_pred))
+            self.y_prev = y_pred
+
+        # モデル出力(学習後)
+        return np.array(Y_pred)
+
+
+
+    # バッチ学習後の予測(自律系のフリーラン)
+    def run(self, U):
+        test_len = len(U)
+        Y_pred = []
+        y = U[0]
+
+        # 時間発展
+        for n in range(test_len):
+            x_in = self.Input(y)
+
+            # フィードバック結合
+            if self.Feedback is not None:
+                x_back = self.Feedback(self.y_prev)
+                x_in += x_back
+
+            # リザバー状態ベクトル
+            x = self.Reservoir(x_in)
+
+            # 学習後のモデル出力
+            y_pred = self.Output(x)
+            Y_pred.append(self.output_func(y_pred))
+            y = y_pred
+            self.y_prev = y
+        
+        return np.array(Y_pred)
+
+
+    # オンライン学習と予測
+    def adapt(self, U, D, optimizer):
+        '''
+        param U: 教師データの入力，データ長*N_u
+        param D: 教師データの出力，データ長*N_y
+        param optimizer: 学習器
+        return: よくわかんない
+        '''
+        data_len = len(U)
+        Y_pred = []
+        Wout_abs_mean = []
+
+        # 出力結合重み更新
+        for n in np.arange(0, data_len, 1):
+            x_in = self.Input(U[n])
+            x = self.Reservoir(x_in)
+            d = D[n]
+            d = self.inv_output_func(d)
+
+            # 学習
+            Wout = optimizer(d, x)
+
+            # モデル出力
+            y = np.dot(Wout, x)
+            Y_pred.append(y)
+            Wout_abs_mean.append(np.mean(np.abs(Wout)))
+        
+        return np.array(Y_pred), np.array(Wout_abs_mean)
+
+    def info(self):
+        '''
+        return: 各種パラメータの値の文字列
+        '''
+        text = ""
+        for key, value in self.params.items():
+            text += f"{key} = {value}\n"
+        return text
+    def infoCSV(self):
+        '''
+        retrun 一部パラメータのcsv形式データ
+        '''
+        data = [self.params['N_x'], self.params['lamb'], self.params['rho'], self.params['leaking_rate']]
+        return data
 
