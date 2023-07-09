@@ -125,7 +125,7 @@ class Output:
         '''
         # 正規分布に従う乱数
         np.random.seed(seed=seed)
-        self.Wout = np.random.normal(size=(N_y, output_num))
+        self.Wout = np.random.normal(size=(N_y, output_num + 1))
 
         # 出力ノード設定
         # self.input_num = input_num
@@ -225,9 +225,9 @@ class Tikhonov:
         '''
         self.beta = beta
         if output_mask != None:
-            output_num = np.sum(output_mask)
+            output_num = np.sum(output_mask) + 1
         else:
-            output_num = N_x
+            output_num = N_x + 1
         self.X_XT = np.zeros((output_num, output_num))
         self.D_XT = np.zeros((N_y, output_num))
         self.N_x = N_x
@@ -415,6 +415,9 @@ class ESN:
                 x_prime = x[np.nonzero(self.output_mask)]
             else:
                 x_prime = x
+            
+            # バイアス追加
+            x_prime = np.append(x_prime, U[n])
 
             # 分類問題の場合は窓幅分の平均を取得
             if self.classification:
@@ -469,6 +472,9 @@ class ESN:
                 x_prime = x[np.nonzero(self.output_mask)]
             else:
                 x_prime = x
+            
+            # バイアス追加
+            x_prime = np.append(x_prime, U[n])
 
             # 分類問題の場合は窓幅分の平均を取得
             if self.classification:
