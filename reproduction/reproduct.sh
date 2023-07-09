@@ -3,8 +3,9 @@
 
 
 # ファイルパスとファイル名(複数可)
-FILEPATH="../input/"
-FILENAME="data_10-5_N2_300.csv data_10-6_N2_300.csv data_10-7_N2_300.csv data_10-8_N2_300.csv data_10-9_N2_300.csv data_0_N2_300.csv"
+FILEPATH="../input/voice/"
+# FILENAME="02_tsumugi_hello.wav 03_metan_hello.wav 04_meimei_hello.wav 05_aoyama_hello.wav 06_kurono_hello.wav"
+FILENAME="02_tsumugi_hello.wav"
 
 # train時の値
 TRAIN_VALUE="0 1 0"
@@ -18,10 +19,10 @@ TEST="10-5"
 
 # 画像保存場所
 FIG_SAVE_PATH="../output/"
-FIG_SAVE_NAME="test_data_all_N2_300_result_01.png"
+FIG_SAVE_NAME="voice_result_12.png"
 
 
-python3 ./reproduction_test.py \
+python3 ./reproduction_voice.py \
     --csv_filepath ${FILEPATH} \
     --csv_filename ${FILENAME} \
     --data_length 700 \
@@ -30,13 +31,45 @@ python3 ./reproduction_test.py \
     --test_value ${TEST_VALUE} \
     --test_duration ${TEST_DURATION} \
     --test_name ${TEST} \
-    --N_x 400 \
+    --N_x 1000 \
     --lamb 0.24 \
-    --rho 0.9 \
+    --rho 0.99 \
     --leaking_rate 0.1 \
-    --figure_save_path ${FIG_SAVE_PATH}\
+    --tikhonov_beta 0.1 \
     --figure_save_name ${FIG_SAVE_NAME}\
+    --figure_save_path ${FIG_SAVE_PATH}\
+    # --feedback_scale 0.1 \
 
+
+# for leak in 0.9 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1
+# do 
+
+# for beta in 0.5 0.3 0.1 0.01 0.001 0.0001
+# do 
+
+
+# python3 ./reproduction_voice.py \
+#     --csv_filepath ${FILEPATH} \
+#     --csv_filename ${FILENAME} \
+#     --data_length 700 \
+#     --train_value ${TRAIN_VALUE} \
+#     --train_duration ${TRAIN_DURATION} \
+#     --test_value ${TEST_VALUE} \
+#     --test_duration ${TEST_DURATION} \
+#     --test_name ${TEST} \
+#     --N_x 1000 \
+#     --lamb 0.24 \
+#     --rho 0.99 \
+#     --leaking_rate ${leak} \
+#     --tikhonov_beta ${beta} \
+#     --figure_save_name ${FIG_SAVE_NAME}\
+#     # --figure_save_path ${FIG_SAVE_PATH}\
+#     # --feedback_scale 0.1 \
+
+
+# done
+
+# done
 
 
 
