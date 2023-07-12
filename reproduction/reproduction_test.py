@@ -112,35 +112,35 @@ def main():
 
 
     # 訓練データ
-    trainData = []
-    trainLabel = []
+    trainGT = []
+    trainU = []
     csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300)
     datas = []
     for data, input in zip(csvData, inputData): # 全データを一つにしてみる
         datas.append(data.copy())
-        trainData.extend(data.copy())
+        trainGT.extend(data.copy())
         value = [x * input + BIAS for x in TRAIN_VALUE]
-        trainLabel.extend(md.makeDiacetylData(value, TRAIN_DURATION))
-    trainData = np.array(trainData).reshape(-1, 1)
-    trainLabel = np.array(trainLabel).reshape(-1, 1)
+        trainU.extend(md.makeDiacetylData(value, TRAIN_DURATION))
+    trainGT = np.array(trainGT).reshape(-1, 1)
+    trainU = np.array(trainU).reshape(-1, 1)
     trainPeriod = np.tile(trainPeriod, len(datas)) if trainPeriod is not None else None
 
     # テストデータ
-    inputLabel = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
-    testData = []
-    testDataStd = []
+    inputU = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
+    testGT = []
+    testGTStd = []
     testValue = []
     if TEST is None: # テスト対象未指定なら全部でやる
         TEST = ["10-5", "10-6", "10-7", "10-8", "10-9", "0"]
     for test in TEST:
-        testData.extend(csvDatasMean[test].reshape(-1, 1))
-        testDataStd.extend(csvDatasStd[test].reshape(-1, 1))
-        testValue.extend([x * inputLabel[test] + BIAS for x in TEST_VALUE])
+        testGT.extend(csvDatasMean[test].reshape(-1, 1))
+        testGTStd.extend(csvDatasStd[test].reshape(-1, 1))
+        testValue.extend([x * inputU[test] + BIAS for x in TEST_VALUE])
     # numpy配列へ変換
-    testData = np.array(testData)
-    testDataStd = np.array(testDataStd)
+    testGT = np.array(testGT)
+    testGTStd = np.array(testGTStd)
     testValue = np.array(testValue)
-    testLabel = md.makeDiacetylData(testValue, TEST_DURATION).reshape(-1, 1)
+    testU = md.makeDiacetylData(testValue, TEST_DURATION).reshape(-1, 1)
 
 
 
@@ -151,7 +151,7 @@ def main():
     # lambda:0.240 ~ density:0.05
     # lambda:0.350 ~ density:0.10
     # lambda:0.440 ~ density:0.15
-    model = ESN(trainLabel.shape[1], trainData.shape[1], N_x, lamb=args.lamb,
+    model = ESN(trainU.shape[1], trainGT.shape[1], N_x, lamb=args.lamb,
                 input_scale=args.input_scale, 
                 rho=args.rho,
                 fb_scale=args.feedback_scale,
@@ -163,8 +163,8 @@ def main():
 
 
     # 学習
-    trainY = model.train(trainLabel, trainData,
-                        Tikhonov(N_x, trainData.shape[1], outputMask, args.tikhonov_beta),
+    trainY = model.train(trainU, trainGT,
+                        Tikhonov(N_x, trainGT.shape[1], outputMask, args.tikhonov_beta),
                         trans_len=transLen,
                         period=trainPeriod)
 
@@ -172,25 +172,25 @@ def main():
 
     # 出力
     model.Reservoir.reset_reservoir_state()
-    testY = model.predict(testLabel)
+    testY = model.predict(testU)
 
     
     # 評価
     # 最初の方を除く
-    RMSE = np.sqrt(((testData[200:] - testY[200:]) ** 2).mean())
-    NRMSE = RMSE/np.sqrt(np.var(testData[200:]))
+    RMSE = np.sqrt(((testGT[200:] - testY[200:]) ** 2).mean())
+    NRMSE = RMSE/np.sqrt(np.var(testGT[200:]))
     print('RMSE =', RMSE)
     print('NRMSE =', NRMSE)
 
-    # R2 = testDataset.dataR2(testY)
+    # R2 = testGTset.dataR2(testY)
     # print("R2 =", R2)
 
     # フリーラン
     # model.Reservoir.reset_reservoir_state()
-    # testY = model.run(testLabel)
+    # testY = model.run(testU)
 
     # データの差分を取る
-    diff = testData - testY # 長さ同じじゃないとバグるので注意
+    diff = testGT - testY # 長さ同じじゃないとバグるので注意
 
 
     # グラフ表示
@@ -203,10 +203,10 @@ def main():
     ax1 = fig.add_subplot(1, 4, 1)
     ax1.set_title("Input", fontsize=20)
     ax1.set_yscale("log")
-    ax1.plot(testLabel[-viewLen:], color='k', label="input")
+    ax1.plot(testU[-viewLen:], color='k', label="input")
     hideValue = [x * 1e4 + BIAS for x in TEST_VALUE]
-    hideLabel = md.makeDiacetylData(hideValue, TEST_DURATION).reshape(-1, 1)
-    ax1.plot(hideLabel[-viewLen:], alpha=0.0)
+    hideU = md.makeDiacetylData(hideValue, TEST_DURATION).reshape(-1, 1)
+    ax1.plot(hideU[-viewLen:], alpha=0.0)
     ax1.set_xlabel("frame")
     # plt.plot([0, int(DETAIL*testLen)], [0.5, 0.5], color='k', linestyle = ':')
     # plt.ylim(0.3, 3.3)
@@ -225,11 +225,11 @@ def main():
 
     ax3 = fig.add_subplot(1, 4, 3, sharey=ax2) # y軸共有
     ax3.set_title("Ground Truth", fontsize=20)
-    ax3.fill_between(np.linspace(0, len(testData)-1, len(testData)), 
-        (testData[-viewLen:] + testDataStd[-viewLen:]).reshape(-1), 
-        (testData[-viewLen:] - testDataStd[-viewLen:]).reshape(-1), 
+    ax3.fill_between(np.linspace(0, len(testGT)-1, len(testGT)), 
+        (testGT[-viewLen:] + testGTStd[-viewLen:]).reshape(-1), 
+        (testGT[-viewLen:] - testGTStd[-viewLen:]).reshape(-1), 
         alpha=0.15, color='k', label="std")
-    ax3.plot(testData[-viewLen:], color="k", label="mean", linewidth=0.5)
+    ax3.plot(testGT[-viewLen:], color="k", label="mean", linewidth=0.5)
     ax3.grid(linestyle=":")
     # for data in datas:
     #     ax3.plot(data.reshape(-1,1), linewidth=0.5)
@@ -250,7 +250,7 @@ def main():
 
     # plt.subplot(3, 1, 3)
     # plt.plot(pred[:, 1], label="predict")
-    # plt.plot(testLabel[:, 1], color='gray', label="label", linestyle=":")
+    # plt.plot(testU[:, 1], color='gray', label="label", linestyle=":")
     # # plt.ylim(0.3, 3.3)
     # plt.legend()
 
@@ -312,7 +312,7 @@ def main():
             F = open(fname1, "w", newline="")
 
             writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(trainData.reshape(-1)) #行追加
+            writer.writerow(trainGT.reshape(-1)) #行追加
 
             # ファイル閉じる
             F.close()
@@ -323,7 +323,7 @@ def main():
             F = open(fname2, "w", newline="")
 
             writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(trainLabel.reshape(-1)) #行追加
+            writer.writerow(trainU.reshape(-1)) #行追加
 
             # ファイル閉じる
             F.close()
@@ -346,7 +346,7 @@ def main():
             F = open(fname11, "w", newline="")
 
             writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(testLabel.reshape(-1)) #行追加
+            writer.writerow(testU.reshape(-1)) #行追加
 
             # ファイル閉じる
             F.close()
@@ -368,7 +368,7 @@ def main():
             F = open(fname13, "w", newline="")
 
             writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(trainData.reshape(-1)) #行追加
+            writer.writerow(trainGT.reshape(-1)) #行追加
 
             # ファイル閉じる
             F.close()
