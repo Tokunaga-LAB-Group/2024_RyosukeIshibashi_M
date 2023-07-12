@@ -200,18 +200,18 @@ def main():
     # R2 = testDataset.dataR2(testY)
     # print("R2 =", R2)
 
-    # csvファイルに保存
-    fname01 = "../output/csv_data/voice_02.csv"
-    # データ生成
-    recData = [args.leaking_rate, args.tikhonov_beta, RMSE, NRMSE]
-    # ファイル開く
-    F = open(fname01, "a", newline="")
+    # # csvファイルに保存
+    # fname01 = "../output/csv_data/voice_03.csv"
+    # # データ生成
+    # recData = [args.leaking_rate, args.tikhonov_beta, RMSE, NRMSE]
+    # # ファイル開く
+    # F = open(fname01, "a", newline="")
 
-    writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-    writer.writerow(recData) #行追加
+    # writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
+    # writer.writerow(recData) #行追加
 
-    # ファイル閉じる
-    F.close()
+    # # ファイル閉じる
+    # F.close()
 
 
     # フリーラン
@@ -220,7 +220,7 @@ def main():
 
     # データの差分を取る
     # diff = testGT - testY # 長さ同じじゃないとバグるので注意
-    diff = testGT - trainY # 長さ同じじゃないとバグるので注意
+    diff = testGT - testY # 長さ同じじゃないとバグるので注意
 
 
     # グラフ表示
@@ -247,7 +247,7 @@ def main():
     ax2.set_title("Prediction", fontsize=20)
     # plt.plot(pred, label="predict")
     # ax2.plot(testY[-viewLen:], color="k", label="predict")
-    ax2.plot(trainY[-viewLen:], color="k", label="predict")
+    ax2.plot(testY[-viewLen:], color="k", label="predict")
     ax2.grid(linestyle=":")
     ax2.set_xlabel("frame")
     # plt.plot(datas[0][-2450:] * 0.01, label="data", color="gray", linestyle=":")
