@@ -34,8 +34,9 @@ python3 ./reproduction_voice.py \
     --N_x 1000 \
     --lamb 0.24 \
     --rho 0.99 \
-    --leaking_rate 0.1 \
-    --tikhonov_beta 0.1 \
+    --leaking_rate 0.9 \
+    --tikhonov_beta 0.0001 \
+    --noise_level 0.001 \
     --figure_save_name ${FIG_SAVE_NAME}\
     --figure_save_path ${FIG_SAVE_PATH}\
     # --feedback_scale 0.1 \
@@ -62,6 +63,7 @@ python3 ./reproduction_voice.py \
 #     --rho 0.99 \
 #     --leaking_rate ${leak} \
 #     --tikhonov_beta ${beta} \
+#     --noise_level 0.001 \
 #     --figure_save_name ${FIG_SAVE_NAME}\
 #     # --figure_save_path ${FIG_SAVE_PATH}\
 #     # --feedback_scale 0.1 \
