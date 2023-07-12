@@ -86,13 +86,15 @@ def main():
     # 諸々のパラメータ
     DATALEN = args.data_length # 全体のデータ長
     BIAS = args.bias # 定常状態用
-    # TRAIN_VALUE = [x + BIAS for x in [0, 1, 0]] # 値
+
     TRAIN_VALUE = args.train_value
     TRAIN_DURATION = args.train_duration # 継続時間
-    # TEST_VALUE = [x + BIAS for x in [0, 1, 0, 1, 0]]
+    
     TEST_VALUE = args.test_value
     TEST_DURATION = args.test_duration
+    
     transLen = args.transition_length
+    
     if args.train_period_value is None:
         trainPeriod = None
     else:
