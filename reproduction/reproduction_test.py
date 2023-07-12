@@ -148,9 +148,6 @@ def main():
     N_x = args.N_x # ノード数
     inputMask  = [1 if i<32  else 0 for i in range(N_x)] # 入力ノード(1 が有効，0 が無効)
     outputMask = [1 if i<256 else 0 for i in range(N_x)] # 出力ノード
-    # lambda:0.240 ~ density:0.05
-    # lambda:0.350 ~ density:0.10
-    # lambda:0.440 ~ density:0.15
     model = ESN(trainU.shape[1], trainGT.shape[1], N_x, lamb=args.lamb,
                 input_scale=args.input_scale, 
                 rho=args.rho,
@@ -182,13 +179,6 @@ def main():
     print('RMSE =', RMSE)
     print('NRMSE =', NRMSE)
 
-    # R2 = testGTset.dataR2(testY)
-    # print("R2 =", R2)
-
-    # フリーラン
-    # model.Reservoir.reset_reservoir_state()
-    # testY = model.run(testU)
-
     # データの差分を取る
     diff = testGT - testY # 長さ同じじゃないとバグるので注意
 
@@ -208,20 +198,12 @@ def main():
     hideU = md.makeDiacetylData(hideValue, TEST_DURATION).reshape(-1, 1)
     ax1.plot(hideU[-viewLen:], alpha=0.0)
     ax1.set_xlabel("frame")
-    # plt.plot([0, int(DETAIL*testLen)], [0.5, 0.5], color='k', linestyle = ':')
-    # plt.ylim(0.3, 3.3)
-    # plt.xlim(500, 2000)
-    # plt.legend(loc="upper right")
 
     ax2 = fig.add_subplot(1, 4, 2)
     ax2.set_title("Prediction", fontsize=20)
-    # plt.plot(pred, label="predict")
     ax2.plot(testY[-viewLen:], color="k", label="predict")
     ax2.grid(linestyle=":")
     ax2.set_xlabel("frame")
-    # plt.plot(datas[0][-2450:] * 0.01, label="data", color="gray", linestyle=":")
-    # plt.xlim(500, 2000)
-    # plt.legend(loc="upper right")
 
     ax3 = fig.add_subplot(1, 4, 3, sharey=ax2) # y軸共有
     ax3.set_title("Ground Truth", fontsize=20)
@@ -231,12 +213,7 @@ def main():
         alpha=0.15, color='k', label="std")
     ax3.plot(testGT[-viewLen:], color="k", label="mean", linewidth=0.5)
     ax3.grid(linestyle=":")
-    # for data in datas:
-    #     ax3.plot(data.reshape(-1,1), linewidth=0.5)
     ax3.set_xlabel("frame")
-    # plt.plot([0, int(DETAIL*testLen)], [0.5, 0.5], color='k', linestyle = ':')
-    # plt.ylim(0.3, 3.3)
-    # plt.xlim(500, 2000)
     ax3.legend(loc="upper right")
 
 
@@ -246,13 +223,6 @@ def main():
     ax4.plot(diff[-viewLen:], color='k', label="diff", linewidth=0.5)
     ax4.grid(linestyle=":")
     ax4.set_xlabel("frame")
-
-
-    # plt.subplot(3, 1, 3)
-    # plt.plot(pred[:, 1], label="predict")
-    # plt.plot(testU[:, 1], color='gray', label="label", linestyle=":")
-    # # plt.ylim(0.3, 3.3)
-    # plt.legend()
 
 
     if saveFig:
@@ -286,92 +256,6 @@ def main():
     plt.show()
 
     # print(stg.stgRead(fname))
-
-
-    # csv形式で保存
-    if False:
-
-        # ファイル名生成
-
-        # train
-        fname1 = "../output/csv_data/train/" + "target_700_N2_300" + ".csv" # 目標データ
-        fname2 = "../output/csv_data/train/" + "input_700_liner" + ".csv" # 入力データ
-        fname3 = "../output/csv_data/train/" + "output_700_liner" + ".csv" # 出力データ
-
-        # test
-        fname11 = "../output/csv_data/test/" + "input_700_" + TEST + "_liner" + ".csv" # 入力データ
-        fname12 = "../output/csv_data/test/" + "output_700_" + TEST + "_liner" + ".csv" # 出力データ
-        fname13 = "../output/csv_data/test/" + "GT_700" + ".csv" # GT
-
-
-        # 全部一度に書きこみ
-        
-        # train/目標データ
-        if(not os.path.exists(fname1)): # ファイルが存在しなければ
-            # ファイル開く
-            F = open(fname1, "w", newline="")
-
-            writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(trainGT.reshape(-1)) #行追加
-
-            # ファイル閉じる
-            F.close()
-
-        # train/入力データ
-        if(not os.path.exists(fname2)): # ファイルが存在しなければ
-            # ファイル開く
-            F = open(fname2, "w", newline="")
-
-            writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(trainU.reshape(-1)) #行追加
-
-            # ファイル閉じる
-            F.close()
-
-        # train/出力データ
-        if(not os.path.exists(fname3)): # ファイルが存在しなければ
-            # ファイル開く
-            F = open(fname3, "w", newline="")
-
-            writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(trainY.reshape(-1)) #行追加
-
-            # ファイル閉じる
-            F.close()
-
-
-        # test/入力データ
-        if(not os.path.exists(fname11)): # ファイルが存在しなければ
-            # ファイル開く
-            F = open(fname11, "w", newline="")
-
-            writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(testU.reshape(-1)) #行追加
-
-            # ファイル閉じる
-            F.close()
-
-        # test/出力データ
-        if(not os.path.exists(fname12)): # ファイルが存在しなければ
-            # ファイル開く
-            F = open(fname12, "w", newline="")
-
-            writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(testY.reshape(-1)) #行追加
-
-            # ファイル閉じる
-            F.close()
-
-        # test/GT
-        if(not os.path.exists(fname13)): # ファイルが存在しなければ
-            # ファイル開く
-            F = open(fname13, "w", newline="")
-
-            writer = csv.writer(F) #ファイルオブジェクトをcsv.writerオブジェクトに変換
-            writer.writerow(trainGT.reshape(-1)) #行追加
-
-            # ファイル閉じる
-            F.close()
 
 
 
