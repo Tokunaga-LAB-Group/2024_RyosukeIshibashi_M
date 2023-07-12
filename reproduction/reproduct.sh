@@ -34,20 +34,7 @@ python3 ./reproduction_test.py \
     --lamb 0.24 \
     --rho 0.9 \
     --leaking_rate 0.1 \
-    --figure_save_path ${FIG_SAVE_PATH}\
-    --figure_save_name ${FIG_SAVE_NAME}\
+    # --figure_save_path ${FIG_SAVE_PATH}\
+    # --figure_save_name ${FIG_SAVE_NAME}\
 
 
-
-
-# nohup python ./test.py \
-#     --GPU 1 \
-#     --test_path ${TEST_PATH} \
-#     --save_path ${SAVE_PATH} \
-#     --save_compare \
-#     --img_size 256 256 --img_type 'gray' \
-#     --mask_hight 32 --mask_width 32 \
-#     --trained_c_weights ${W_C} \
-#     --trained_d_weights ${W_D} \
-#     --select_metric 'mae' \
-#     > "./Logs/${SAVE_NAME}_test.log" &
