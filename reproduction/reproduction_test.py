@@ -114,6 +114,7 @@ def main():
 
 
     # 訓練データ
+    # trainUが入力，trainGTが正解データ
     trainGT = []
     trainU = []
     csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300)
@@ -128,6 +129,7 @@ def main():
     trainPeriod = np.tile(trainPeriod, len(datas)) if trainPeriod is not None else None
 
     # テストデータ
+    # testUが入力，testGTが正解データ
     inputU = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
     testGT = []
     testGTStd = []
@@ -221,7 +223,6 @@ def main():
 
     ax4 = fig.add_subplot(1, 4, 4, sharey=ax2)
     ax4.set_title("Difference", fontsize=20)
-    # ax4.set_yscale("log")
     ax4.plot(diff[-viewLen:], color='k', label="diff", linewidth=0.5)
     ax4.grid(linestyle=":")
     ax4.set_xlabel("frame")
