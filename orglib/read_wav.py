@@ -84,3 +84,23 @@ def writeWav(fname, data, samplerate):
 
     # 書きこみ
     sf.write(fname, data, samplerate)
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    # 波形表示
+
+    path = "../input/voice/02_tsumugi_hello.wav"
+    fname = "../output/voice_wave_tsumugi_01.png"
+
+    data, _ = readWav(path)
+
+    print(data.shape, data)
+
+    plt.plot(data, color="k", linewidth=0.5)
+    plt.xlim(5000, 10000)
+    plt.ylim(-0.2, 0.2)
+    plt.grid(linestyle=":")
+    plt.show()
+
+    plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
