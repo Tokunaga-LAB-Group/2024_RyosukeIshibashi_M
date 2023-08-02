@@ -58,15 +58,18 @@ def getArg():
     parser.add_argument("--figure_save_name", type=str, default=None,
                         help="Figuer name to result. No assignment to not saving")
 
-    parser.add_argument("--N_x", type=int, required=True,
+    # リザバー層の諸々パラメータ
+    parser.add_argument("--reservoir_num", type=int, default=1,
+                        help="Number of Reservoir")
+    parser.add_argument("--N_x", type=int, nargs="*", required=True,
                         help="Number of node in Reservoir")
     parser.add_argument("--input_scale", type=float, default=1.0,
                         help="Scaling rate of input data")
-    parser.add_argument("--lamb", type=float, default=0.24,
+    parser.add_argument("--lamb", type=float, nargs="*", default=0.24,
                         help="Average distance of connection between nodes")
-    parser.add_argument("--rho", type=float, required=True,
+    parser.add_argument("--rho", type=float, nargs="*", required=True,
                         help="Spectral Radius setpoints")
-    parser.add_argument("--leaking_rate", type=float, required=True,
+    parser.add_argument("--leaking_rate", type=float, nargs="*", required=True,
                         help="Value of reaking late")
     parser.add_argument("--feedback_scale", type=float, default=None,
                         help="Feedback rate of reservoir state")
@@ -271,35 +274,47 @@ def main():
 
     # モデル生成
 
-    N_x = args.N_x // 2 # ノード数
-    inputMask  = [1 if i<32  else 0 for i in range(N_x)] # 入力ノード(1 が有効，0 が無効)
-    outputMask = [1 if i<256 else 0 for i in range(N_x)] # 出力ノード
+    # リザバー層の数
+    resNum = args.reservoir_num
+    if resNum != len(args.N_x) or resNum != len(args.lamb) \
+        or resNum != len(args.rho) or resNum != len(args.leaking_rate):
+        print("The number of some parameters in the reservoir layer does not match \"reservoir_num\" !!")
+        exit()
 
-    # モデルを作る
-
-    # Reservoir層は外部で定義するようにした
     res = []
-    res.append(Reservoir(N_x, args.lamb, args.rho, np.tanh, args.leaking_rate))
-    res.append(Reservoir(N_x, args.lamb, args.rho, np.tanh, args.leaking_rate))
+    inputMasks = []
+    outputMasks = []
+    for i in range(resNum):
+
+        # マスク指定
+        N_x = args.N_x[i] # ノード数
+        inputMasks.append([1 if i<32  else 0 for i in range(N_x)]) # 入力ノード(1 が有効，0 が無効)
+        outputMasks.append([1 if i<128 else 0 for i in range(N_x)]) # 出力ノード
+
+        # モデルを作る
+        # Reservoir層は外部で定義するようにした
+        res.append(Reservoir(N_x, args.lamb[i], args.rho[i], np.tanh, args.leaking_rate[i], seed=i+801))
+
 
 
     model = ESNs(trainLabel.shape[1], trainData.shape[1], 
                 reservoirs = res, 
-                reservoir_num = 2,
+                reservoir_num = resNum,
                 input_scale = args.input_scale,
                 fb_scale = args.feedback_scale,
                 fb_seed = 99,
                 noise_level = args.noise_level,
-                input_mask = inputMask,
-                output_mask = outputMask
+                input_mask = inputMasks,
+                output_mask = outputMasks
                 )
 
     
     # 学習
-    outputMasks = outputMask.copy()
-    outputMasks.extend(outputMask)
+    outputMaskConcat = []
+    for i in range(resNum):
+        outputMaskConcat.extend(outputMasks[i].copy())
     trainY = model.train(trainLabel, trainData,
-                        Tikhonov(N_x*2, trainData.shape[1], outputMasks, args.tikhonov_beta),
+                        Tikhonov(N_x*2, trainData.shape[1], outputMaskConcat, args.tikhonov_beta),
                         trans_len=transLen,
                         period=trainPeriod)
 

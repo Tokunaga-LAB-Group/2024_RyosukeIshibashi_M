@@ -621,48 +621,48 @@ class ESNs:
         self.noise = []
         self.window = []
         seed_delta = 1
-        for res in reservoirs:
+        for i in range(reservoir_num):
             # 入力層
-            self.Input.append(Input(N_u, res.N_x, input_scale))
+            self.Input.append(Input(N_u, reservoirs[i].N_x, input_scale))
 
             # リザバー層
-            self.Reservoirs.append(res)
+            self.Reservoirs.append(reservoirs[i])
 
             # 要素が0以外の数を与える
-            input_sum = res.N_x if input_mask == None else np.sum(input_mask)
-            output_sum += res.N_x if output_mask == None else np.sum(output_mask)
-            self.N_x.append(res.N_x)
-            N_x_sum += res.N_x
+            input_sum = reservoirs[i].N_x if input_mask[i] == None else np.sum(input_mask[i])
+            output_sum += reservoirs[i].N_x if output_mask[i] == None else np.sum(output_mask[i])
+            self.N_x.append(reservoirs[i].N_x)
+            N_x_sum += reservoirs[i].N_x
 
 
             # 出力層からリザバーへのフィードバックの有無
             if fb_scale is None:
                 self.Feedback = None
             else:
-                self.Feedback.append(Feedback(N_y, res.N_x, fb_scale, fb_seed + res.seed + seed_delta))
+                self.Feedback.append(Feedback(N_y, reservoirs[i].N_x, fb_scale, fb_seed + reservoirs[i].seed + seed_delta))
                 seed_delta += 1
 
             # リザバーの状態更新におけるノイズの有無
             if noise_level is None:
                 self.noise = None
             else:
-                np.random.seed(seed=res.seed + seed_delta)
+                np.random.seed(seed=reservoirs[i].seed + seed_delta)
                 seed_delta += 1
-                self.noise.append(np.random.uniform(-noise_level, noise_level, (res.N_x)))
+                self.noise.append(np.random.uniform(-noise_level, noise_level, (reservoirs[i].N_x)))
 
             # 分類問題か否か
             if classification:
                 if average_window is None:
                     raise ValueError("Window for time average is not given!")
                 else:
-                    self.window.append(np.zeros((average_window, res.N_x)))
+                    self.window.append(np.zeros((average_window, reservoirs[i].N_x)))
 
             # 情報記録
-            p_N_x.append(res.N_x)
-            p_lamb.append(res.lamb)
-            p_rho.append(res.rho)
-            p_activation_func.append(res.activation_func)
-            p_leaking_rate.append(res.leaking_rate)
+            p_N_x.append(reservoirs[i].N_x)
+            p_lamb.append(reservoirs[i].lamb)
+            p_rho.append(reservoirs[i].rho)
+            p_activation_func.append(reservoirs[i].activation_func)
+            p_leaking_rate.append(reservoirs[i].leaking_rate)
 
 
         # リードアウト層(リードアウト層は一つ)
@@ -731,13 +731,13 @@ class ESNs:
 
                 # 絞込みをマスク行列で行うように変更
                 # 入力の絞り込み
-                if self.input_mask != None:
-                    x_in *= self.input_mask
+                if self.input_mask[i] != None:
+                    x_in *= self.input_mask[i]
                 # リザバー状態ベクトル
                 x = self.Reservoirs[i](x_in)
                 # 出力の絞り込み
-                if self.output_mask != None:
-                    x_prime = x[np.nonzero(self.output_mask)]
+                if self.output_mask[i] != None:
+                    x_prime = x[np.nonzero(self.output_mask[i])]
                 else:
                     x_prime = x
 
@@ -804,13 +804,13 @@ class ESNs:
                     x_in += x_back
 
                 # 入力の絞り込み
-                if self.input_mask != None:
-                    x_in *= self.input_mask
+                if self.input_mask[i] != None:
+                    x_in *= self.input_mask[i]
                 # リザバー状態ベクトル
                 x = self.Reservoirs[i](x_in)
                 # 出力の絞り込み
-                if self.output_mask != None:
-                    x_prime = x[np.nonzero(self.output_mask)]
+                if self.output_mask[i] != None:
+                    x_prime = x[np.nonzero(self.output_mask[i])]
                 else:
                     x_prime = x
 
