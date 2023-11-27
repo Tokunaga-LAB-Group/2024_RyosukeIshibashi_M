@@ -75,7 +75,7 @@ def readCsvAll(fnames, tgt, seed=917):
         data = readCsvWithCorrection(fname, tgt)
         csvDatas = np.append(csvDatas, data, axis=0)
         csvDatasMean[fname.split("_")[1]] = np.mean(data, axis=0)
-        csvDatasStd[fname.split("_")[1]] = np.std(data, axis=0)
+        csvDatasStd[fname.split("_")[1]] = np.std(data, axis=0) / np.sqrt(len(data))
         inputDatas = np.append(inputDatas, [inputDatasLabel[fname.split("_")[1]]] * len(data))
     # print(csvDatas.shape)
     # print(inputDatas.shape, inputDatas)
