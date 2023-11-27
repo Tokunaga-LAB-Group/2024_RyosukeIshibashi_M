@@ -21,7 +21,7 @@ FIG_SAVE_PATH="../output/"
 FIG_SAVE_NAME="test_data_all_N2_300_result_01.png"
 
 
-python3 ./reproduction_test.py \
+python3 ./reproduction_multi_01.py \
     --csv_filepath ${FILEPATH} \
     --csv_filename ${FILENAME} \
     --data_length 700 \
@@ -30,10 +30,11 @@ python3 ./reproduction_test.py \
     --test_value ${TEST_VALUE} \
     --test_duration ${TEST_DURATION} \
     --test_name ${TEST} \
-    --N_x 400 \
-    --lamb 0.24 \
-    --rho 0.9 \
-    --leaking_rate 0.1 \
+    --reservoir_num 3 \
+    --N_x 400 400 400\
+    --lamb 0.24 0.24 0.24 \
+    --rho 0.9 0.9 0.9 \
+    --leaking_rate 0.1 0.5 0.9\
     --figure_save_path ${FIG_SAVE_PATH}\
     --figure_save_name ${FIG_SAVE_NAME}\
 
