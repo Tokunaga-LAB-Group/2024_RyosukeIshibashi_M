@@ -140,6 +140,8 @@ def makeFig(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450,
         (tData[-viewLen:] - tDataStd[-viewLen:]).reshape(-1), 
         alpha=0.15, color='k', label="std")
     ax3.plot(tData[-viewLen:], color="k", label="mean", linewidth=0.5)
+    # 軸調整用
+    ax3.set_ylim(-0.5, 1.5)
     ax3.grid(linestyle=":")
     # for data in datas:
     #     ax3.plot(data.reshape(-1,1), linewidth=0.5)
@@ -293,7 +295,7 @@ def main():
 
         # モデルを作る
         # Reservoir層は外部で定義するようにした
-        res.append(Reservoir(N_x, args.lamb[i], args.rho[i], np.tanh, args.leaking_rate[i], seed=i+801))
+        res.append(Reservoir(N_x, args.lamb[i], args.rho[i], np.tanh, args.leaking_rate[i], seed=i+1113))
 
 
 
