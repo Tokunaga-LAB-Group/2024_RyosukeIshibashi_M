@@ -127,4 +127,5 @@ test of the text, 0.123456789, てすとですよ試験
 
 	# stgWrite("./test/dia_result01.png", text, savePath="./test/dia_result01_stg.png")
 
-	print(stgRead("../output/data_all_N2_300_result11_31.png"))
+	# print(stgRead("/home/ishibashi/Reservoir_ESN/output/test_data_all_N2_300_result_21.png"))
+	print(stgRead("/home/ishibashi/Reservoir_ESN/output/20231113/test_data_all_N2_300_result_10-5_01.png"))
