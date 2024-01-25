@@ -69,7 +69,7 @@ def readCsvAll(fnames, tgt, seed=917):
     csvDatas = np.empty([0, 700])
     csvDatasMean = {}
     csvDatasStd = {}
-    inputDatasLabel = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
+    inputDatasLabel = {"10-5":5, "10-6":4, "10-7":3, "10-8":2, "10-9":1, "0":0} # エレガントじゃない
     inputDatas = np.empty(0)
     for fname in fnames:
         data = readCsvWithCorrection(fname, tgt)

@@ -112,9 +112,9 @@ def makeFig(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450,
 
     ax1 = fig.add_subplot(1, 4, 1)
     ax1.set_title("Input", fontsize=20)
-    ax1.set_yscale("log")
+    # ax1.set_yscale("log")
     ax1.plot(tLabel[-viewLen:], color='k', label="input")
-    hideValue = [x * 1e4 + args.bias for x in args.test_value]
+    hideValue = [x * 5 + args.bias for x in args.test_value]
     hideLabel = md.makeDiacetylData(hideValue, args.test_duration).reshape(-1, 1)
     ax1.plot(hideLabel[-viewLen:], alpha=0.0)
     ax1.set_xlabel("frame")
@@ -257,7 +257,7 @@ def main():
     trainPeriod = np.tile(trainPeriod, len(datas)) if trainPeriod is not None else None
 
     # テストデータ
-    inputLabel = {"10-5":1e4, "10-6":1e3, "10-7":1e2, "10-8":1e1, "10-9":1e0, "0":0} # エレガントじゃない
+    inputLabel = {"10-5":5, "10-6":4, "10-7":3, "10-8":2, "10-9":1, "0":0} # エレガントじゃない
     testData = []
     testDataStd = []
     testValue = []
@@ -295,7 +295,7 @@ def main():
 
         # モデルを作る
         # Reservoir層は外部で定義するようにした
-        res.append(Reservoir(N_x, args.lamb[i], args.rho[i], np.tanh, args.leaking_rate[i], seed=i+1113))
+        res.append(Reservoir(N_x, args.lamb[i], args.rho[i], np.tanh, args.leaking_rate[i], seed=i+1127))
 
 
 
