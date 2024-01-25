@@ -14,11 +14,11 @@ TRAIN_DURATION="300 200 200"
 TEST_VALUE="0 1 0"
 TEST_DURATION="300 200 200"
 # test時に予測するジアセチルの濃度(複数可)
-TEST="10-5"
+TEST="10-6"
 
 # 画像保存場所
-FIG_SAVE_PATH="../output/"
-FIG_SAVE_NAME="test_data_all_N2_300_result_01.png"
+FIG_SAVE_PATH="../output/20231127/"
+FIG_SAVE_NAME="test_data_all_N2_300_result_106_01.png"
 
 
 python3 ./reproduction_multi_01.py \
