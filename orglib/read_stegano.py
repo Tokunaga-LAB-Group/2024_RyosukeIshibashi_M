@@ -1,7 +1,15 @@
-import stegano as st
+import sys
+import pathlib
+# 実行ファイルのあるディレクトリの絶対パスを取得
+current_dir = pathlib.Path(__file__).resolve().parent
+# モジュールのあるパスを追加
+sys.path.append( str(current_dir) + "/../" )
+
+from orglib import stegano as st
 import numpy as np
 import re
 from tqdm import tqdm
+import glob
 
 
 # steganoを施された画像から任意のデータを取り出す
