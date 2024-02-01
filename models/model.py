@@ -87,7 +87,7 @@ class Reservoir:
         print("density =" , nx.density(G))
 
         # 行列への変換(結合構造のみ)
-        connection = nx.to_numpy_matrix(G)
+        connection = nx.to_numpy_array(G)
         W = np.array(connection)
 
         # 非ゼロ要素を一様分布に従う乱数として生成
