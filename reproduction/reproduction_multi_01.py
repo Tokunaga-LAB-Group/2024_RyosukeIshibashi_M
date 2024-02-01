@@ -79,6 +79,12 @@ def getArg():
                         help="Regularization parameter for Ridge regression")
     
 
+    # ループ処理のためのシード値
+    parser.add_argument("--csv_seed", type=int, default=0,
+                        help="Seed value for shuffling CSV files")
+    parser.add_argument("--reservoir_seed", type=int, default=0,
+                        help="Seed value for shuffling Reservoir connection")
+
 
     # 解析結果を返す
     return parser.parse_args()
@@ -245,7 +251,7 @@ def main():
     # 訓練データ
     trainData = []
     trainLabel = []
-    csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300)
+    csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300, args.csv_seed)
     datas = []
     for data, input in zip(csvData, inputData): # 全データを一つにしてみる
         datas.append(data.copy())
@@ -295,7 +301,7 @@ def main():
 
         # モデルを作る
         # Reservoir層は外部で定義するようにした
-        res.append(Reservoir(N_x, args.lamb[i], args.rho[i], np.tanh, args.leaking_rate[i], seed=i+1127))
+        res.append(Reservoir(N_x, args.lamb[i], args.rho[i], np.tanh, args.leaking_rate[i], seed=i+args.reservoir_seed))
 
 
 
