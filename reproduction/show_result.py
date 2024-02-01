@@ -58,11 +58,11 @@ if __name__ == "__main__":
 
     # heatmap表示
     # figureオブジェクトとaxesオブジェクトの作成
-    fig = plt.figure(figsize=[6, 6])
+    fig = plt.figure(figsize=[8, 6])
 
     # グラフの作成
     data_pivot = df.pivot_table(values="NRMSE", index="csv seed", columns="reservoir seed")
-    sb.heatmap(data=data_pivot, cmap='coolwarm', annot=True)
+    sb.heatmap(data=data_pivot, cmap='Blues', annot=True, square=True, fmt=".4g", vmax=1.0, vmin=0.3)
 
     # 図全体のタイトルの追加
     fig.suptitle(noudo , fontsize=20)
