@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
 
     # 保存
-    fname = "/home/ishibashi/Reservoir_ESN/output/test/test01.png"
+    fname = "/home/ishibashi/Reservoir_ESN/output/test/test_" + noudo + "_02.png"
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
     # グラフの表示
