@@ -62,14 +62,14 @@ if __name__ == "__main__":
 
     # グラフの作成
     data_pivot = df.pivot_table(values="NRMSE", index="csv seed", columns="reservoir seed")
-    sb.heatmap(data=data_pivot, cmap='Blues', annot=True, square=True, fmt=".4g", vmax=1.0, vmin=0.3)
+    sb.heatmap(data=data_pivot, cmap='Blues', annot=True, square=True, fmt=".4g", vmin=0.3, vmax=1.0)
 
     # 図全体のタイトルの追加
     fig.suptitle(noudo , fontsize=20)
 
 
     # 保存
-    fname = "/home/ishibashi/Reservoir_ESN/output/test/test_" + noudo + "_02.png"
+    fname = "/home/ishibashi/Reservoir_ESN/output/test/test_" + noudo + "_01.png"
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
     # グラフの表示
