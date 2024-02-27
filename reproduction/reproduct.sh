@@ -34,7 +34,7 @@ python3 ./reproduction_multi_01.py \
     --N_x 400 400 400 \
     --lamb 0.24 0.24 0.24 \
     --rho 0.9 0.9 0.9 \
-    --leaking_rate 0.1 0.5 0.9\
+    --leaking_rate 0.1 0.5 0.9 \
     --figure_save_path ${FIG_SAVE_PATH} \
     --figure_save_name ${FIG_SAVE_NAME} \
 
