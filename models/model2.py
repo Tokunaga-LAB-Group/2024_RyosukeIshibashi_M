@@ -97,7 +97,7 @@ class Reservoir:
         W *= cp.random.uniform(-rec_scale, rec_scale, (N_x, N_x))
 
         # スペクトル半径の計算
-        eigv_list = cp.linalg.eigh(W)[0]
+        eigv_list = cp.array(np.linalg.eig(cp.asnumpy(W))[0])
         sp_radius = cp.max(cp.abs(eigv_list))
 
         # 指定のスペクトル半径rhoに合わせてスケーリング
