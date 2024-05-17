@@ -17,11 +17,12 @@ TEST_DURATION="300 200 200"
 TEST="10-5"
 
 # 画像保存場所
-FIG_SAVE_PATH="../output/20240201/"
+FIG_SAVE_PATH="../output/20240202/"
 FIG_SAVE_NAME="test_data_all_N2_300_result_105_01.png"
 
 
-python3 ./reproduction_multi_01.py \
+# プロファイルする
+python3 -m cProfile -o ${FIG_SAVE_PATH}profile.txt ./reproduction_multi_02.py \
     --csv_filepath ${FILEPATH} \
     --csv_filename ${FILENAME} \
     --data_length 700 \

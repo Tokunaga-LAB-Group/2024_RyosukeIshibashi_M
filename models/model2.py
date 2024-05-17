@@ -11,6 +11,7 @@ current_dir = pathlib.Path(__file__).resolve().parent
 # モジュールのあるパスを追加
 sys.path.append( str(current_dir) + "\..\\" )
 import numpy as np
+import cupy as cp
 import networkx as nx
 import math
 from typing import List # 型指定用，v3.9からは非推奨
@@ -53,7 +54,7 @@ class Input:
         return: N_x次元のベクトル
         '''
         # print(self.Win.shape, u.shape)
-        return np.dot(self.Win, u)
+        return cp.asnumpy(cp.dot(self.Win, u))
 
 
 
@@ -88,21 +89,21 @@ class Reservoir:
 
         # 行列への変換(結合構造のみ)
         connection = nx.to_numpy_array(G)
-        W = np.array(connection)
+        W = cp.array(connection)
 
         # 非ゼロ要素を一様分布に従う乱数として生成
         rec_scale = 1.0
-        np.random.seed(seed = self.seed*self.seed)
-        W *= np.random.uniform(-rec_scale, rec_scale, (N_x, N_x))
+        cp.random.seed(seed = self.seed*self.seed)
+        W *= cp.random.uniform(-rec_scale, rec_scale, (N_x, N_x))
 
         # スペクトル半径の計算
-        eigv_list = np.linalg.eig(W)[0]
-        sp_radius = np.max(np.abs(eigv_list))
+        eigv_list = cp.array(np.linalg.eig(cp.asnumpy(W))[0])
+        sp_radius = cp.max(cp.abs(eigv_list))
 
         # 指定のスペクトル半径rhoに合わせてスケーリング
         W *= rho / sp_radius
 
-        return W
+        return cp.asnumpy(W)
     
     # リザバー状態ベクトルの更新
     def __call__(self, x_in):
@@ -111,7 +112,7 @@ class Reservoir:
         return: 更新後の状態ベクトル
         '''
         # self.x = self.x.reshape(-1, 1)
-        self.x = (1.0 - self.alpha) * self.x + self.alpha * self.activation_func(np.dot(self.W, self.x) + x_in)
+        self.x = (1.0 - self.alpha) * self.x + self.alpha * self.activation_func(cp.asnumpy(cp.dot(self.W, self.x)) + x_in)
 
         return self.x
     
@@ -151,7 +152,7 @@ class Output:
         # x[self.input_num + self.output_num:] = 0
         # print(x.shape, np.count_nonzero(x == 0))
         # print(np.dot(self.Wout, x).shape)
-        return np.dot(self.Wout, x)
+        return cp.asnumpy(cp.dot(self.Wout, x))
 
     # 学習済みの出力結合重み行列を設定
     def setweight(self, Wout_opt):
@@ -187,7 +188,7 @@ class Feedback:
         return: N_x次元のベクトル
         '''
         # print(np.dot(self.Wfb, y).shape)
-        return np.dot(self.Wfb, y)
+        return cp.asnumpy(cp.dot(self.Wfb, y))
 
 
 
@@ -216,7 +217,7 @@ class Pseudoinv:
     
     # Woutの最適解(近似解)の導出
     def get_Wout_opt(self):
-        Wout_opt = np.dot(self.D, np.linalg.pinv(self.X))
+        Wout_opt = cp.asnumpy(cp.dot(self.D, cp.linalg.pinv(self.X)))
         return Wout_opt
 
 
@@ -243,8 +244,8 @@ class Tikhonov:
     def __call__(self, d, x):
         x = np.reshape(x, (-1, 1))
         d = np.reshape(d, (-1, 1))
-        self.X_XT += np.dot(x, x.T)
-        self.D_XT += np.dot(d, x.T)
+        self.X_XT += cp.asnumpy(cp.dot(x, x.T))
+        self.D_XT += cp.asnumpy(cp.dot(d, x.T))
     
     # Woutの最適解(近似解)の導出
     def get_Wout_opt(self):
@@ -274,11 +275,11 @@ class RLS:
     def __call__(self, d, x):
         x = np.reshape(x, (-1, 1))
         for i in np.arange(self.update):
-            v = d - np.dot(self.Wout, x)
-            gain = (1 / self.lam * np.dot(self.P, x))
-            gain = gain / (1 + 1 / self.lam * np.dot(np.dot(x.T, self.P), x))
-            self.P = 1 / self.lam * (self.P - np.dot(np.dot(gain, x.T), self.P))
-            self.Wout += np.dot(v, gain.T)
+            v = d - cp.dot(self.Wout, x)
+            gain = (1 / self.lam * cp.dot(self.P, x))
+            gain = gain / (1 + 1 / self.lam * cp.dot(cp.dot(x.T, self.P), x))
+            self.P = 1 / self.lam * (self.P - cp.dot(cp.dot(gain, x.T), self.P))
+            self.Wout += cp.asnumpy(cp.dot(v, gain.T))
 
         return self.Wout
 
