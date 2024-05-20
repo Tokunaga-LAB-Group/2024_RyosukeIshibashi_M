@@ -6,16 +6,15 @@
 # 必要ライブラリ読み込み
 import sys
 import pathlib
+import json
+import cupy as cp
+import networkx as nx
+from tqdm import tqdm
+
 # 実行ファイルのあるディレクトリの絶対パスを取得
 current_dir = pathlib.Path(__file__).resolve().parent
 # モジュールのあるパスを追加
 sys.path.append( str(current_dir) + "\..\\" )
-#import numpy as np
-import cupy as cp
-import networkx as nx
-import math
-from typing import List # 型指定用，v3.9からは非推奨
-from tqdm import tqdm
 from orglib import graph_maker as gm
 
 
@@ -41,7 +40,7 @@ class BaseLayer:
         param outDim: 出力次元
         '''
         self.inputDimention = inDim
-        self.output = outDim
+        self.outputDimention = outDim
 
         # 内部結合設定は各クラスで個別にやる
         self.internalConnection = cp.empty() # バグるかも
@@ -62,6 +61,15 @@ class BaseLayer:
         self.internalState = inputVector
 
         return cp.dot(self.internalConnection, self.internalState)
+    
+    # 各ハイパーパラメータの情報
+    def info(self):
+        '''
+        return: クラスメンバの名称と値
+        '''
+        info = {"inputDimention": self.inputDimention, "outputDimention":self.outputDimention}
+        
+        return info
 
 
 
@@ -78,11 +86,26 @@ class InputLayer(BaseLayer):
         param seed: 内部結合初期化のシード値
         '''
         super().__init__(inDim, outDim)
+        self.inputScale = inputScale
+        self.seed = seed
         # 一様分布に従う乱数
         cp.random.seed(seed=seed)
 
         # 内部結合設定
         self.internalConnection = cp.random.uniform(-inputScale, inputScale, (inDim, outDim))
+
+    # 各ハイパーパラメータの情報
+    def info(self):
+        '''
+        return: クラスメンバの名称と値
+        '''
+        myInfo = {"inputScale":self.inputScale, "seed":self.seed}
+
+        info = super().info()
+        info.update(myInfo)
+
+        return info
+
 
 
 
@@ -158,6 +181,20 @@ class ReservoirLayer(BaseLayer):
     # リザバー状態ベクトルの初期化
     def resetReservoirState(self):
         self.internalState = cp.zeros(self.nodeNum)
+
+    # 各ハイパーパラメータの情報
+    def info(self):
+        '''
+        return: クラスメンバの名称と値
+        '''
+        myInfo = {"nodeNum":self.nodeNum, "lambda":self.lamb, "rho":self.rho,
+                  "activationFunc":self.activationFunc, "leakingRate":self.leakingRate, "seed":self.seed}
+
+        info = super().info()
+        info.update(myInfo)
+
+        return info
+
 
 
 # 出力層
@@ -246,8 +283,9 @@ class Tikhonov:
         param outDim: 出力次元
         param beta: 正則化パラメータ
         '''
-        self.beta = beta
         self.nodeNum = nodeNum
+        self.outputDimention = outDim
+        self.beta = beta
         self.X_XT = cp.zeros((nodeNum, nodeNum))
         self.D_XT = cp.zeros((outDim, nodeNum))
     
@@ -268,6 +306,16 @@ class Tikhonov:
         WoutOpt = cp.dot(self.D_XT, XpseudoInv)
 
         return WoutOpt
+    
+        # 各ハイパーパラメータの情報
+    def info(self):
+        '''
+        return: クラスメンバの名称と値
+        '''
+        info = {"method":"Tikhonov", "nodeNum":self.nodeNum, "outputDimention":self.outputDimention, "beta": self.beta}
+
+        return info
+
 
 
 # # 逐次最小二乗法(RLS法)
@@ -313,62 +361,39 @@ class Tikhonov:
 
 
 # エコーステートネットワーク(ESN)
+# 各層は外部で定義する
+# このクラスで提供するのは学習とその結果を得る機能
 class ESN: 
     # 各層の初期化
-    def __init__(self, N_u, N_y, N_x,
-                lamb = 0.135, # lambda:0.135 ~ density:0.05
-                input_scale = 1.0, 
-                rho = 0.95, 
-                activation_func = cp.tanh,
-                fb_scale = None, fb_seed = 0, 
-                noise_level = None,
-                leaking_rate = 1.0,
-                output_func = identify,
-                inv_output_func = identify,
-                classification = False,
-                average_window = None,
-                input_mask = None,
-                output_mask = None
+    def __init__(self,
+                 inputLayer: InputLayer,
+                 reservoirLayer: ReservoirLayer,
+                 outputLayer: OutputLayer,
+                 noise_level = None,
+                 output_func = identify,
+                 inv_output_func = identify,
+                 classification = False,
+                 average_window = None,
                 ):
         '''
-        param N_u: 入力次元
-        param N_y: 出力次元
-        param N_x: リザバーのノード数
-        param density: リザバーのネットワーク結合密度
-        param input_scale: 入力スケーリング
-        param rho: リカレント結合重み行列のスペクトル半径
-        param activation_func: リザバーノードの活性化関数関数
-        param fb_scale: フィードバックスケーリング
-        param fb_seed: フィードバック結合重み行列に使う乱数のシード値
-        param leaking_rate: leaky integratorモデルのリーク率
+        param noise_level: 入力に付与するノイズの大きさ
         param output_func: 出力層の非線形関数
         param inv_output_func: output_funcの逆関数←何に使うの...?
         param classification: 分類問題の場合はtrue
         param average_window: 分類問題で平均出力する窓幅
-        param input_num: 入力ノード数
-        param output_num: 出力ノード数
         '''
-        self.Input = Input(N_u, N_x, input_scale)
-        self.Reservoir = Reservoir(N_x, lamb, rho, activation_func, leaking_rate)
-        # 要素が0以外の数を与える
-        input_num = N_x if input_mask == None else np.sum(input_mask)
-        output_num = N_x if output_mask == None else np.sum(output_mask)
-        self.Output = Output(N_x, N_y, output_num)
-        self.N_u = N_u
-        self.N_y = N_y
-        self.N_x = N_x
-        self.y_prev = np.zeros(N_y)
+        self.inputLayer = inputLayer
+        self.reservoirLayer = reservoirLayer
+        self.outputLayer = outputLayer
+        self.y_prev = cp.zeros(reservoirLayer.nodeNum)
         self.output_func = output_func
         self.inv_output_func = inv_output_func
         self.classification = classification
-        self.input_mask = input_mask
-        self.output_mask = output_mask
-        self.params = {"N_u":N_u, "N_y":N_y, "N_x":N_x, "lamb":lamb, "input_scale":input_scale, 
-                        "rho":rho, "activation_func":activation_func, 
-                        "fb_scale":fb_scale, "fb_seed":fb_seed, "leaking_rate":leaking_rate, 
-                        "output_func":output_func, "inv_output_func":inv_output_func, 
-                        "classification":classification, "average_window":average_window,
-                        "input_mask":input_mask, "output_mask":output_mask}
+        self.params = {"InputLayer":self.inputLayer.info(), 
+                       "ReservoirLayer":self.reservoirLayer.info(),
+                       "OutputLayer":self.outputLayer.info(),
+                       "ESN":{"output_func":output_func, "inv_output_func":inv_output_func, 
+                              "classification":classification, "average_window":average_window}}
 
         # # 出力層からリザバーへのフィードバックの有無
         # if fb_scale is None:
@@ -381,14 +406,14 @@ class ESN:
             self.noise = None
         else:
             cp.random.seed(seed=0)
-            self.noise = cp.random.uniform(-noise_level, noise_level, (self.N_x))
+            self.noise = cp.random.uniform(-noise_level, noise_level, (self.reservoirLayer.nodeNum))
 
         # 分類問題か否か
         if classification:
             if average_window is None:
                 raise ValueError("Window for time average is not given!")
             else:
-                self.window = cp.zeros((average_window, N_x))
+                self.window = cp.zeros((average_window, self.reservoirLayer.nodeNum))
 
 
     # バッチ学習
@@ -567,15 +592,20 @@ class ESN:
         '''
         return: 各種パラメータの値の文字列
         '''
-        text = ""
-        for key, value in self.params.items():
-            text += f"{key} = {value}\n"
-        return text
+        # text = ""
+        # for category, info in self.params.items():
+        #     text += f"{category} : {{ \n"
+        #     for key, value in info.items():
+        #         text += f"{key} : {value}\n"
+        #     text += "}\n"
+
+        return json.dumps(self.params, ensure_ascii=False, indent=4)
     def infoCSV(self):
         '''
         retrun 一部パラメータのcsv形式データ
         '''
-        data = [self.params['N_x'], self.params['lamb'], self.params['rho'], self.params['leaking_rate']]
+        resData = self.params["ReservoirLayer"]
+        data = [resData['nodeNum'], resData['lamb'], resData['rho'], resData['leakingRate']]
         return data
 
 
