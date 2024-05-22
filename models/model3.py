@@ -43,8 +43,8 @@ class BaseLayer:
         self.outputDimention = outDim
 
         # 内部結合設定は各クラスで個別にやる
-        self.internalConnection = cp.empty() # バグるかも
-        self.internalState = cp.empty()
+        self.internalConnection = cp.empty(0) # バグるかも
+        self.internalState = cp.empty(0)
 
     def setIntCon(self, incn):
         '''
@@ -369,11 +369,11 @@ class ESN:
                  inputLayer: InputLayer,
                  reservoirLayer: ReservoirLayer,
                  outputLayer: OutputLayer,
-                 noise_level = None,
-                 output_func = identify,
-                 inv_output_func = identify,
+                 noiseLevel = None,
+                 outputFunc = identify,
+                 invOutputFunc = identify,
                  classification = False,
-                 average_window = None,
+                 averageWindow = None,
                 ):
         '''
         param noise_level: 入力に付与するノイズの大きさ
@@ -386,14 +386,14 @@ class ESN:
         self.reservoirLayer = reservoirLayer
         self.outputLayer = outputLayer
         self.y_prev = cp.zeros(reservoirLayer.nodeNum)
-        self.output_func = output_func
-        self.inv_output_func = inv_output_func
+        self.outputFunc = outputFunc
+        self.invOutputFunc = invOutputFunc
         self.classification = classification
         self.params = {"InputLayer":self.inputLayer.info(), 
                        "ReservoirLayer":self.reservoirLayer.info(),
                        "OutputLayer":self.outputLayer.info(),
-                       "ESN":{"output_func":output_func, "inv_output_func":inv_output_func, 
-                              "classification":classification, "average_window":average_window}}
+                       "ESN":{"outputFunc":outputFunc, "invOutputFunc":invOutputFunc, 
+                              "classification":classification, "averageWindow":averageWindow}}
 
         # # 出力層からリザバーへのフィードバックの有無
         # if fb_scale is None:
@@ -402,135 +402,127 @@ class ESN:
         #     self.Feedback = Feedback(N_y, N_x, fb_scale, fb_seed)
 
         # リザバーの状態更新におけるノイズの有無
-        if noise_level is None:
+        if noiseLevel is None:
             self.noise = None
         else:
             cp.random.seed(seed=0)
-            self.noise = cp.random.uniform(-noise_level, noise_level, (self.reservoirLayer.nodeNum))
+            self.noise = cp.random.uniform(-noiseLevel, noiseLevel, (self.reservoirLayer.nodeNum))
 
         # 分類問題か否か
         if classification:
-            if average_window is None:
+            if averageWindow is None:
                 raise ValueError("Window for time average is not given!")
             else:
-                self.window = cp.zeros((average_window, self.reservoirLayer.nodeNum))
+                self.window = cp.zeros((averageWindow, self.reservoirLayer.nodeNum))
 
 
     # バッチ学習
-    def train(self, U, D, optimizer, trans_len = None, period = None):
+    def train(self, U, D, optimizer:Tikhonov, transLen = None, bias = False):
         '''
-        param U: 教師データの入力，データ長*N_u
-        param D: 教師データの出力，データ長*N_y
+        param U: 入力データ，データ長*inputDimention
+        param D: 入力データに対する正解データ，データ長*outputDimention
         param optimizer: 学習器
-        param trans_len: 過渡期の長さ
-        param period: 学習区間(0,1のリストで与える)
-        return: 学習前のモデル出力，データ長*N_y
+        param transLen: 過渡期の長さ
+        param bias: バイアスの有無(入力値を直接出力層に持っていくか否か)
+        return: 学習前のモデル出力，データ長*outputDimention
         '''
-        train_len = len(U)
-        if trans_len is None:
-            trans_len = 0 # デフォルトで0にすればいいのでは？
-        if period is None:
-            period = [1] * train_len
-        Y = []
+        trainLen = len(U)
+        if transLen is None:
+            transLen = 0 # デフォルトで0にすればいいのでは？
+        Y = cp.empty(0)
 
         # 時間発展
-        for n in tqdm(range(train_len)):
-            x_in = self.Input(U[n])
+        for n in tqdm(range(trainLen)):
 
-            # フィードバック結合
-            if self.Feedback is not None:
-                x_back = self.Feedback(self.y_prev)
-                # x_back[self.input_num:] = 0
-                # print(x_in.shape, x_back.shape)
-                x_in += x_back
+            #### input layer
+            inputVector = self.inputLayer(U[n])
+
+            # # フィードバック結合
+            # if self.Feedback is not None:
+            #     x_back = self.Feedback(self.y_prev)
+            #     # x_back[self.input_num:] = 0
+            #     # print(x_in.shape, x_back.shape)
+            #     x_in += x_back
             
-            # ノイズ
+            # ノイズ付与
             if self.noise is not None:
-                # print(x_in.shape, self.noise.shape)
-                # self.noise[self.input_num:] = 0
-                x_in += self.noise
+                inputVector += self.noise
             
 
-            # 絞込みをマスク行列で行うように変更
-            # 入力の絞り込み
-            if self.input_mask != None:
-                x_in *= self.input_mask
-            # リザバー状態ベクトル
-            x = self.Reservoir(x_in)
-            # 出力の絞り込み
-            if self.output_mask != None:
-                x_prime = x[np.nonzero(self.output_mask)]
-            else:
-                x_prime = x
+            #### Reservoir layer
+            reservoirVector = self.reservoirLayer(inputVector)
 
-            # 分類問題の場合は窓幅分の平均を取得
+            # 分類問題の場合は窓幅分の平均を取得(要修正)
             if self.classification:
-                self.window = np.append(self.window, x_prime.reshape(1, -1), axis = 0)
-                self.window = np.delete(self.window, 0, 0)
-                x_prime = np.average(self.window, axis = 0)
+                self.window = cp.append(self.window, reservoirVector.reshape(1, -1), axis = 0)
+                self.window = cp.delete(self.window, 0, 0)
+                reservoirVector = cp.average(self.window, axis = 0)
             
             # 目標値
-            d = D[n]
-            d = self.inv_output_func(d)
+            grandTruth = D[n]
+            grandTruth = self.invOutputFunc(grandTruth)
 
             # 学習器
-            # 学習前の値にマスクを掛けておく
-            if n > trans_len: # 過渡期を過ぎたら
-                if period[n] == 1: # 学習可能区間なら
-                    optimizer(d, x_prime)
+            if n > transLen: # 過渡期を過ぎたら
+                optimizer(grandTruth, reservoirVector)
             
+            #### output layer
+
+            # バイアスの設定
+            if bias:
+                reservoirVector = cp.append(reservoirVector, U[n])
+
             # 学習前のモデル出力
-            y = self.Output(x_prime)
-            Y.append(self.output_func(y))
-            self.y_prev = d
-        
+            outputVector = self.outputLayer(reservoirVector)
+            Y = cp.append(Y, self.outputFunc(outputVector))
+            # self.prevOutputVector = grandTruth # フィードバックで使う
+
         # 学習済みの出力結合重み行列を設定
-        self.Output.setweight(optimizer.get_Wout_opt())
+        self.outputLayer.setOptWeight(optimizer.getWoutOpt())
 
         # モデル出力
-        return np.array(Y)
+        return Y
+    
 
     # バッチ学習後の予測
     def predict(self, U):
-        test_len = len(U)
-        Y_pred = []
+        '''
+        param U: 入力データ，データ長*inputDimention
+        return: 学習後のモデル出力
+        '''
+        testLen = len(U)
+        predictY = cp.empty(0)
 
         # 時間発展
-        for n in range(test_len):
-            x_in = self.Input(U[n])
+        for n in range(testLen):
 
-            # フィードバック結合
-            if self.Feedback is not None:
-                # print(self.y_prev.shape)
-                x_back = self.Feedback(self.y_prev)
-                # x_back[self.input_num:] = 0
-                x_in += x_back
+            #### input layer
+            inputVector = self.inputLayer(U[n])
+
+            # # フィードバック結合
+            # if self.Feedback is not None:
+            #     # print(self.y_prev.shape)
+            #     x_back = self.Feedback(self.y_prev)
+            #     # x_back[self.input_num:] = 0
+            #     x_in += x_back
             
-            # 入力の絞り込み
-            if self.input_mask != None:
-                x_in *= self.input_mask
-            # リザバー状態ベクトル
-            x = self.Reservoir(x_in)
-            # 出力の絞り込み
-            if self.output_mask != None:
-                x_prime = x[np.nonzero(self.output_mask)]
-            else:
-                x_prime = x
+            #### Reservoir layer
+            reservoirVector = self.reservoirLayer(inputVector)
 
             # 分類問題の場合は窓幅分の平均を取得
             if self.classification:
-                self.window = np.append(self.window, x_prime.reshape(1, -1), axis = 0)
-                self.window = np.delete(self.window, 0, 0)
-                x_prime = np.average(self.window, axis = 0)
-            
+                self.window = cp.append(self.window, reservoirVector.reshape(1, -1), axis = 0)
+                self.window = cp.delete(self.window, 0, 0)
+                reservoirVector = cp.average(self.window, axis = 0)
+
+            #### output layer
             # 学習後のモデル出力
-            # print(x.shape)
-            y_pred = self.Output(x_prime)
-            Y_pred.append(self.output_func(y_pred))
-            self.y_prev = y_pred
+            outputVector = self.outputLayer(reservoirVector)
+            predictY = cp.append(predictY, self.outputFunc(outputVector))
+            # self.y_prev = y_pred
 
         # モデル出力(学習後)
-        return np.array(Y_pred)
+        return predictY
 
     # # バッチ学習後の予測(自律系のフリーラン)
     # def run(self, U):
@@ -600,6 +592,7 @@ class ESN:
         #     text += "}\n"
 
         return json.dumps(self.params, ensure_ascii=False, indent=4)
+    
     def infoCSV(self):
         '''
         retrun 一部パラメータのcsv形式データ
