@@ -90,8 +90,8 @@ if __name__ == "__main__":
     print("main")
 
     #### make data
-    # trainGT, trainInput, testGT, testInput = nFramePredict(1000, 700, 30, 1, 100, 0.1)
-    trainGT, trainInput, testGT, testInput = fSinPredict(1000, 700, 0)
+    trainGT, trainInput, testGT, testInput = nFramePredict(1000, 700, 30, 1, 100, 0.1)
+    # trainGT, trainInput, testGT, testInput = fSinPredict(1000, 700, 0)
     
     #### layer
     nodeNum = 100
@@ -100,10 +100,10 @@ if __name__ == "__main__":
     inputLayer = InputLayer(1, 16, inputScale=1)
 
     # Reservoir
-    reservoirLayer = ReservoirLayer(16, nodeNum, nodeNum, 0.2, 0.95, cp.tanh, 0.9)
+    reservoirLayer = ReservoirLayer(16, 32, nodeNum, 0.2, 0.95, cp.tanh, 0.9)
 
     # Output
-    outputLayer = OutputLayer(nodeNum, 1)
+    outputLayer = OutputLayer(32, 1)
 
 
     #### ESN
@@ -129,25 +129,25 @@ if __name__ == "__main__":
     fig = plt.figure(figsize=[12, 3])
 
     ax1 = fig.add_subplot(1,2,1)
-    ax1.set_title("Result", fontsize=20)
-    ax1.plot(cp.asnumpy(trainGT), color="k", label="Train GT", linewidth=0.9, linestyle=":")
-    ax1.plot(cp.asnumpy(trainOutput), label="Train Output", alpha=0.7, linewidth=0.9)
+    ax1.set_title("Train", fontsize=15)
+    ax1.plot(cp.asnumpy(trainGT), color="k", label="GT", linewidth=0.9, linestyle=":")
+    ax1.plot(cp.asnumpy(trainOutput), label="Output", alpha=0.7, linewidth=0.9)
     ax1.grid(linestyle=":")
     ax1.set_xlabel("frame")
 
     ax1.legend()
 
     ax2 = fig.add_subplot(1,2,2)
-    ax2.set_title("Result", fontsize=20)
-    ax2.plot(cp.asnumpy(testGT), color="k", label="Test GT", linewidth=0.9, linestyle=":")
-    ax2.plot(cp.asnumpy(testOutput), label="Test Output", alpha=0.7, linewidth=0.9)
+    ax2.set_title("Test", fontsize=15)
+    ax2.plot(cp.asnumpy(testGT), color="k", label="GT", linewidth=0.9, linestyle=":")
+    ax2.plot(cp.asnumpy(testOutput), label="Output", alpha=0.7, linewidth=0.9)
     ax2.grid(linestyle=":")
     ax2.set_xlabel("frame")
 
     ax2.legend()
 
     # 生成するファイル名
-    fname = "output/20240523/test11.png"
+    fname = "output/20240523/test14.png"
     # 保存
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
