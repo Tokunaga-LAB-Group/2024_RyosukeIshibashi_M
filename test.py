@@ -26,48 +26,81 @@ if __name__ == "__main__":
     #### make data
     # nフレーム先予測
     # ノイズの入った正弦波を予測
-    T = 1010      # データ長
+    T = 1000      # データ長
+    diff = 100     # 予測するフレーム数
     amp = 1       # 振幅
     period = 100  # 周期
     noize = 0.1   # ノイズの大きさ
 
-    noizeData = cp.random.uniform(-noize, noize, T)
-    x = cp.linspace(0, 2*cp.pi, period)
-    rawData = amp * cp.sin(cp.resize(x, T))
+    noizeData = cp.random.uniform(-noize, noize, T+diff)
+    x = cp.arange(T+diff) * (2 * cp.pi / period)
+    rawData = amp * cp.sin(x)
     data = rawData + noizeData
 
-    label = data[10:]
-    data = data[:-10]
+    label = data[diff:]
+    data = data[:-diff]
 
     trainData = data[:700]
     trainLabel = label[:700]
     testData = data[700:]
-    testLbale = data[700:]
+    testLabel = data[700:]
 
     #### layer
-    nodeNum = 200
+    nodeNum = 100
 
     # Input
     inputLayer = InputLayer(1, 16, inputScale=1)
 
     # Reservoir
-    reservoirLayer = ReservoirLayer(16, 16, nodeNum, 0.2, 0.9, cp.tanh, 0.1)
+    reservoirLayer = ReservoirLayer(16, nodeNum, nodeNum, 0.2, 0.95, cp.tanh, 0.9)
 
     # Output
-    outputLayer = OutputLayer(16, 1)
+    outputLayer = OutputLayer(nodeNum, 1)
 
 
     #### ESN
     
     model = ESN(inputLayer, reservoirLayer, outputLayer)
 
-    optimizer = Tikhonov(nodeNum, 16, 0.1)
+    optimizer = Tikhonov(outputLayer.inputDimention, outputLayer.outputDimention, 0.1)
+
+    # print(outputLayer.internalConnection.shape)
 
     # train
     trainOutput = model.train(trainData, trainLabel, optimizer)
 
+    # print(outputLayer.internalConnection.shape)
+
     # test
+    model.reservoirLayer.resetReservoirState()
     testOutput = model.predict(testData)
 
+
+    #### graph
+
+    fig = plt.figure(figsize=[12, 3])
+
+    ax1 = fig.add_subplot(1,2,1)
+    ax1.set_title("Result", fontsize=20)
+    ax1.plot(cp.asnumpy(trainLabel), color="k", label="Test Label", linewidth=0.9, linestyle=":")
+    ax1.plot(cp.asnumpy(trainOutput), label="Test Output", alpha=0.7, linewidth=0.9)
+    ax1.grid(linestyle=":")
+    ax1.set_xlabel("frame")
+
+    ax1.legend()
+
+    ax2 = fig.add_subplot(1,2,2)
+    ax2.set_title("Result", fontsize=20)
+    ax2.plot(cp.asnumpy(testLabel), color="k", label="Test Label", linewidth=0.9, linestyle=":")
+    ax2.plot(cp.asnumpy(testOutput), label="Test Output", alpha=0.7, linewidth=0.9)
+    ax2.grid(linestyle=":")
+    ax2.set_xlabel("frame")
+
+    ax2.legend()
+
+    # 生成するファイル名
+    fname = "output/20240523/test10.png"
+    # 保存
+    plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
 
