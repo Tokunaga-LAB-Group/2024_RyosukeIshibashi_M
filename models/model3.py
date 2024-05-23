@@ -60,7 +60,7 @@ class BaseLayer:
         '''
         self.internalState = inputVector
 
-        return cp.dot(self.internalState, self.internalConnection)
+        return cp.dot(self.internalConnection, self.internalState)
     
     # 各ハイパーパラメータの情報
     def info(self):
@@ -92,7 +92,7 @@ class InputLayer(BaseLayer):
         cp.random.seed(seed=seed)
 
         # 内部結合設定
-        self.internalConnection = cp.random.uniform(-inputScale, inputScale, (inDim, outDim))
+        self.internalConnection = cp.random.uniform(-inputScale, inputScale, (outDim, inDim))
 
     # 各ハイパーパラメータの情報
     def info(self):
@@ -211,7 +211,7 @@ class OutputLayer(BaseLayer):
         super().__init__(inDim, outDim)
         # 正規分布に従う乱数
         cp.random.seed(seed=seed)
-        self.internalConnection = cp.random.normal(size=(inDim, outDim))
+        self.internalConnection = cp.random.normal(size=(outDim, inDim))
 
 
     # 学習済みの出力結合重み行列を設定
@@ -279,23 +279,23 @@ class OutputLayer(BaseLayer):
 
 # リッジ回帰(beta=0の時は線形回帰)
 class Tikhonov:
-    def __init__(self, nodeNum, outDim, beta):
+    def __init__(self, outLayerInDim, outLayerOutDim, beta):
         '''
-        param nodeNum: リザバーのノード数
-        param outDim: リザバー層の出力次元(正確には出力層の入力次元)
+        param outLayerInDim: 出力層の入力次元
+        param outLayerOutDim: 出力層の出力次元
         param beta: 正則化パラメータ
         '''
-        self.nodeNum = nodeNum
-        self.outputDimention = outDim
+        self.outLayerInDim = outLayerInDim
+        self.outLayerOutDim = outLayerOutDim
         self.beta = beta
-        self.X_XT = cp.zeros((nodeNum, nodeNum))
-        self.D_XT = cp.zeros((outDim, nodeNum))
+        self.X_XT = cp.zeros((outLayerInDim, outLayerInDim))
+        self.D_XT = cp.zeros((outLayerOutDim, outLayerInDim))
     
     # 学習用の行列の更新
     def __call__(self, d, x):
         '''
-        param d: リザバー層を通ったデータ(Wout * x)
-        param x: リザバー層の内部状態
+        param d: 目標値
+        param x: リザバー層の内部状態(出力層の入力次元に合わせる)
         '''
         x = cp.reshape(x, (-1, 1))
         d = cp.reshape(d, (-1, 1))
@@ -304,7 +304,7 @@ class Tikhonov:
     
     # Woutの最適解(近似解)の導出
     def getWoutOpt(self):
-        XpseudoInv = cp.linalg.inv(self.X_XT + self.beta * cp.identity(self.nodeNum))
+        XpseudoInv = cp.linalg.inv(self.X_XT + self.beta * cp.identity(self.outLayerInDim))
         WoutOpt = cp.dot(self.D_XT, XpseudoInv)
 
         return WoutOpt
@@ -378,11 +378,11 @@ class ESN:
                  averageWindow = None,
                 ):
         '''
-        param noise_level: 入力に付与するノイズの大きさ
-        param output_func: 出力層の非線形関数
-        param inv_output_func: output_funcの逆関数←何に使うの...?
+        param noiseLevel: 入力に付与するノイズの大きさ
+        param outputFunc: 出力層の非線形関数
+        param invOutputFunc: output_funcの逆関数←何に使うの...?
         param classification: 分類問題の場合はtrue
-        param average_window: 分類問題で平均出力する窓幅
+        param averageWindow: 分類問題で平均出力する窓幅
         '''
         self.inputLayer = inputLayer
         self.reservoirLayer = reservoirLayer
@@ -460,19 +460,19 @@ class ESN:
                 self.window = cp.delete(self.window, 0, 0)
                 reservoirVector = cp.average(self.window, axis = 0)
             
+            #### output layer
+
             # 目標値
             grandTruth = D[n]
             grandTruth = self.invOutputFunc(grandTruth)
+            
+            # バイアスの設定
+            if bias:
+                reservoirVector = cp.append(U[n], reservoirVector)
 
             # 学習器
             if n > transLen: # 過渡期を過ぎたら
-                optimizer(reservoirVector, self.reservoirLayer.internalState)
-            
-            #### output layer
-
-            # バイアスの設定
-            if bias:
-                reservoirVector = cp.append(reservoirVector, U[n])
+                optimizer(grandTruth, self.reservoirLayer.internalState[:self.outputLayer.inputDimention])
 
             # 学習前のモデル出力
             outputVector = self.outputLayer(reservoirVector)
@@ -487,9 +487,10 @@ class ESN:
     
 
     # バッチ学習後の予測
-    def predict(self, U):
+    def predict(self, U, bias=False):
         '''
         param U: 入力データ，データ長*inputDimention
+        param bias: バイアスの有無(入力値を直接出力層に持っていくか否か)
         return: 学習後のモデル出力
         '''
         testLen = len(U)
@@ -518,6 +519,11 @@ class ESN:
                 reservoirVector = cp.average(self.window, axis = 0)
 
             #### output layer
+
+            # バイアスの設定
+            if bias:
+                reservoirVector = cp.append(U[n], reservoirVector)
+
             # 学習後のモデル出力
             outputVector = self.outputLayer(reservoirVector)
             predictY = cp.append(predictY, self.outputFunc(outputVector))
