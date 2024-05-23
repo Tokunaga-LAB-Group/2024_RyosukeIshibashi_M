@@ -60,7 +60,7 @@ class BaseLayer:
         '''
         self.internalState = inputVector
 
-        return cp.dot(self.internalConnection, self.internalState)
+        return cp.dot(self.internalState, self.internalConnection)
     
     # 各ハイパーパラメータの情報
     def info(self):
@@ -156,7 +156,7 @@ class ReservoirLayer(BaseLayer):
         W *= cp.random.uniform(-recScale, recScale, (nodeNum, nodeNum))
 
         # スペクトル半径の計算
-        eigvList = cp.array(cp.linalg.eig(W)[0])
+        eigvList, _ = cp.linalg.eigh(W)
         spRadius = cp.max(cp.abs(eigvList))
 
         # 指定のスペクトル半径rhoに合わせてスケーリング
@@ -170,13 +170,15 @@ class ReservoirLayer(BaseLayer):
         param inputVector: 入力状態ベクトル
         return: 更新後の値(cupy)
         '''
-        inputVector.resize(self.nodeNum) # ノード数と同じshapeにリサイズ(追加分は0埋め)
+        # ノード数と同じshapeにリサイズ(追加分は0埋め)
+        inputVector = cp.resize(inputVector, self.nodeNum)
+        inputVector[len(inputVector):] = 0
 
         self.internalState = \
         (1.0 - self.leakingRate) * self.internalState + \
         self.leakingRate * self.activationFunc(cp.dot(self.internalConnection, self.internalState) + inputVector)
 
-        return self.internalState[:self.outDim]
+        return self.internalState[:self.outputDimention]
     
     # リザバー状態ベクトルの初期化
     def resetReservoirState(self):
@@ -280,7 +282,7 @@ class Tikhonov:
     def __init__(self, nodeNum, outDim, beta):
         '''
         param nodeNum: リザバーのノード数
-        param outDim: 出力次元
+        param outDim: リザバー層の出力次元(正確には出力層の入力次元)
         param beta: 正則化パラメータ
         '''
         self.nodeNum = nodeNum
@@ -464,7 +466,7 @@ class ESN:
 
             # 学習器
             if n > transLen: # 過渡期を過ぎたら
-                optimizer(grandTruth, reservoirVector)
+                optimizer(reservoirVector, self.reservoirLayer.internalState)
             
             #### output layer
 
