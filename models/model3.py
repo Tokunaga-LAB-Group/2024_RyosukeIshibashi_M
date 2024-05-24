@@ -599,7 +599,15 @@ class ESN:
         #         text += f"{key} : {value}\n"
         #     text += "}\n"
 
-        return json.dumps(self.params, ensure_ascii=False, indent=4)
+        # objectをJSONにするためのやつ
+        def func(obj):
+            try:
+                return obj.__dict__
+            except AttributeError:
+                return f"{obj}"
+            
+
+        return json.dumps(self.params, ensure_ascii=False, indent=4, default=func)
     
     def infoCSV(self):
         '''
