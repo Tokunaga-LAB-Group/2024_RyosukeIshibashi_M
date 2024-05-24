@@ -33,10 +33,10 @@ def nFramePredict(T, trainLen, diff, amp, period, noise):
     return: (trainGT, trainInput, testGT, testInput)
     '''
 
-    noizeData = cp.random.uniform(-noise, noise, T+diff)
+    noiseData = cp.random.uniform(-noise, noise, T+diff)
     x = cp.arange(T+diff) * (2 * cp.pi / period)
     rawData = amp * cp.sin(x)
-    data = rawData + noizeData
+    data = rawData + noiseData
 
     gt = data[diff:]
     input = data[:-diff]
