@@ -49,6 +49,35 @@ def nFramePredict(T, trainLen, diff, amp, period, noise):
     return (trainGT, trainInput, testGT, testInput)
 
 
+# nフレーム先予測
+# 正弦波が入った正弦波を予測
+def nFramePredict2(T, trainLen, diff, amp, period, namp):
+    '''
+    param T: データ長
+    param trainLen: Tのうち何フレームを学習に使うか
+    param diff: 予測するフレーム数
+    param amp: 振幅
+    param period: 周期
+    param namp: ノイズ代わりの正弦波の大きさ(周期は元の 1/10)
+    return: (trainGT, trainInput, testGT, testInput)
+    '''
+
+    x = cp.arange(T+diff) * (2 * cp.pi / (period/10))
+    noiseData = namp * cp.sin(x)
+    x = cp.arange(T+diff) * (2 * cp.pi / period)
+    rawData = amp * cp.sin(x)
+    data = rawData + noiseData
+
+    gt = data[diff:]
+    input = data[:-diff]
+
+    trainGT = gt[:trainLen]
+    trainInput = input[:trainLen]
+    testGT = gt[trainLen:]
+    testInput = input[trainLen:]
+
+    return (trainGT, trainInput, testGT, testInput)
+
 # 周波数予測
 # 数値に合わせた周波数の正弦波を出力
 def fSinPredict(T, trainLen, noise):
@@ -90,11 +119,12 @@ if __name__ == "__main__":
     print("main")
 
     #### make data
-    trainGT, trainInput, testGT, testInput = nFramePredict(1000, 700, 30, 1, 100, 0.1)
+    # trainGT, trainInput, testGT, testInput = nFramePredict(1000, 700, 30, 1, 100, 0.1)
+    trainGT, trainInput, testGT, testInput = nFramePredict2(1000, 700, 30, 1, 100, 0.1)
     # trainGT, trainInput, testGT, testInput = fSinPredict(1000, 700, 0)
     
     #### layer
-    nodeNum = 100
+    nodeNum = 200
 
     # Input
     inputLayer = InputLayer(1, 16, inputScale=1)
@@ -147,8 +177,12 @@ if __name__ == "__main__":
     ax2.legend()
 
     # 生成するファイル名
-    fname = "output/20240523/test14.png"
+    fname = "output/20240524/test05.png"
     # 保存
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
+
+
+    # info表示できるか
+    # print(model.info())
 
 
