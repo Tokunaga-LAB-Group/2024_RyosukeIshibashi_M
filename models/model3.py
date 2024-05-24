@@ -112,7 +112,7 @@ class InputLayer(BaseLayer):
 # リザバー
 class ReservoirLayer(BaseLayer):
     # リカレント結合重み行列Wの初期化
-    def __init__(self, inDim, outDim, nodeNum, lamb, rho, activationFunc, leakingRate, bias=False, seed=0):
+    def __init__(self, inDim, outDim, nodeNum, lamb, rho, activationFunc, leakingRate, seed=0):
         '''
         param inDim: 入力次元
         param outDim: 出力次元
@@ -121,7 +121,6 @@ class ReservoirLayer(BaseLayer):
         param rho: リカレント結合重み行列のスペクトル半径
         param activationFunc: ノードの活性化関数(式をそのまま渡す)
         param leakingRate: leaky integratorモデルのリーク率(時間スケール)
-        param bias: バイアスの有無(入力値を直接出力層に持っていくか否か)
         param seed: 内部結合初期化のシード値
         '''
         super().__init__(inDim, outDim)
@@ -130,7 +129,6 @@ class ReservoirLayer(BaseLayer):
         self.rho = rho
         self.activationFunc = activationFunc
         self.leakingRate = leakingRate
-        self.bias = bias
         self.seed = seed
         self.internalConnection = self.make_connection(nodeNum, lamb, rho) # リカレント結合重み行列の生成
         self.internalState = cp.zeros(nodeNum) # リザバー状態ベクトルの初期化
@@ -167,10 +165,9 @@ class ReservoirLayer(BaseLayer):
         return W
     
     # リザバー状態ベクトルの更新
-    def __call__(self, inputVector, U=None):
+    def __call__(self, inputVector):
         '''
         param inputVector: 入力状態ベクトル
-        param U: バイアス用の入力データ
         return: 更新後の値(cupy)
         '''
         # ノード数と同じshapeにリサイズ(追加分は0埋め)
@@ -180,12 +177,6 @@ class ReservoirLayer(BaseLayer):
         self.internalState = \
         (1.0 - self.leakingRate) * self.internalState + \
         self.leakingRate * self.activationFunc(cp.dot(self.internalConnection, self.internalState) + inputVector)
-
-        # # バイアスの設定(保留)
-        # if self.bias:
-        #     if U is None:
-        #         ValueError("BIAS value is not exist!")
-        #     self.internalState = cp.append(U, self.internalState)[:-1]
 
         return self.internalState[:self.outputDimention]
     
@@ -200,7 +191,7 @@ class ReservoirLayer(BaseLayer):
         '''
         myInfo = {"nodeNum":self.nodeNum, "lambda":self.lamb, "rho":self.rho,
                   "activationFunc":self.activationFunc, "leakingRate":self.leakingRate,
-                  "bias":self.bias, "seed":self.seed}
+                  "seed":self.seed}
 
         info = super().info()
         info.update(myInfo)
@@ -212,17 +203,36 @@ class ReservoirLayer(BaseLayer):
 # 出力層
 class OutputLayer(BaseLayer):
     # 出力結合重み行列の初期化
-    def  __init__(self, inDim, outDim, seed=0):
+    def  __init__(self, inDim, outDim, bias=False, ud=0, seed=0):
         '''
         param inDim: 入力次元
         param outDim: 出力次元
+        param bias: バイアスの有無(入力値を直接出力層に持っていくか否か)
+        param ud: 入力値の次元
         param seed: 内部結合初期化のシード値
         '''
         super().__init__(inDim, outDim)
+        
+        # バイアスの設定
+        self.bias = bias
+        if self.bias:
+            self.inputDimention += ud
+
         # 正規分布に従う乱数
         cp.random.seed(seed=seed)
-        self.internalConnection = cp.random.normal(size=(outDim, inDim))
+        self.internalConnection = cp.random.normal(size=(self.outputDimention, self.inputDimention))
 
+    # バイアスに対応
+    def __call__(self, inputVector, U):
+        '''
+        param inputVector: 入力状態ベクトル
+        param U: モデルへの入力値
+        return: 更新後の値(cupy)
+        '''
+        if self.bias:
+            inputVector = cp.append(inputVector, U)
+
+        return super().__call__(inputVector)
 
     # 学習済みの出力結合重み行列を設定
     def setOptWeight(self, incnOpt):
@@ -231,6 +241,14 @@ class OutputLayer(BaseLayer):
         '''
         super().setIntCon(incnOpt)
 
+    # 各ハイパーパラメータの情報
+    def info(self):
+        '''
+        return: クラスメンバの名称と値
+        '''
+        info = {"inputDimention": self.inputDimention, "outputDimention":self.outputDimention, "bias":self.bias}
+        
+        return info
 
 
 # # 出力フィードバック
@@ -480,7 +498,7 @@ class ESN:
                 optimizer(grandTruth, self.reservoirLayer.internalState[:self.outputLayer.inputDimention])
 
             # 学習前のモデル出力
-            outputVector = self.outputLayer(reservoirVector)
+            outputVector = self.outputLayer(reservoirVector, U[n])
             Y = cp.append(Y, self.outputFunc(outputVector))
             # self.prevOutputVector = grandTruth # フィードバックで使う
 
@@ -525,7 +543,7 @@ class ESN:
             #### output layer
 
             # 学習後のモデル出力
-            outputVector = self.outputLayer(reservoirVector)
+            outputVector = self.outputLayer(reservoirVector, U[n])
             predictY = cp.append(predictY, self.outputFunc(outputVector))
             # self.y_prev = y_pred
 
