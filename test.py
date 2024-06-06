@@ -118,6 +118,34 @@ def fSinPredict(T, trainLen, noise):
 if __name__ == "__main__":
     print("main")
 
+
+    # ファイルパスとファイル名(複数可)
+    FILEPATH="input/"
+    FILENAME="data_10-6_N2_300.csv"
+
+    csvFname = []
+    csvFname.append(FILEPATH + FILENAME)
+    csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300, 0)
+
+    csvData = cp.array(csvData)
+    print(csvData.shape)
+
+
+    fig = plt.figure(figsize=[6, 3])
+
+    ax1 = fig.add_subplot(1,1,1)
+    ax1.set_title("Data", fontsize=15)
+    ax1.plot(cp.asnumpy(csvData[0:5].T), linewidth=0.3)
+    ax1.grid(linestyle=":")
+    ax1.set_xlabel("frame")
+
+    # ax1.legend()
+
+    # 生成するファイル名
+    fname = "output/20240603/dataset106.png"
+    # 保存
+    plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
+
     #### make data
     # trainGT, trainInput, testGT, testInput = nFramePredict(1000, 700, 30, 1, 100, 0.1)
     trainGT, trainInput, testGT, testInput = nFramePredict2(1000, 700, 30, 1, 100, 0.1)
@@ -130,7 +158,7 @@ if __name__ == "__main__":
     inputLayer = InputLayer(1, 16, inputScale=1)
 
     # Reservoir
-    reservoirLayer = ReservoirLayer(16, 32, nodeNum, 0.2, 0.95, cp.tanh, 0.9)
+    reservoirLayer = ReservoirLayer(16, 32, nodeNum, 0.2, 0.95, cp.tanh, 0.22)
 
     # Output
     outputLayer = OutputLayer(32, 1)
@@ -177,7 +205,7 @@ if __name__ == "__main__":
     ax2.legend()
 
     # 生成するファイル名
-    fname = "output/20240524/test05.png"
+    fname = "output/20240524/test09.png"
     # 保存
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
