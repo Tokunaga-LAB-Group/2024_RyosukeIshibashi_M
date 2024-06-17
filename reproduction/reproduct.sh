@@ -14,14 +14,14 @@ TRAIN_DURATION="300 200 200"
 TEST_VALUE="0 1 0"
 TEST_DURATION="300 200 200"
 # test時に予測するジアセチルの濃度(複数可)
-TEST="10-5"
+TEST="10-6"
 
 # 画像保存場所
-FIG_SAVE_PATH="../output/20240201/"
-FIG_SAVE_NAME="test_data_all_N2_300_result_105_01.png"
+FIG_SAVE_PATH="../output/20240611/"
+FIG_SAVE_NAME="result_106_nx1200_lr01_02.png"
 
 
-python3 ./reproduction_multi_01.py \
+python3 ./reproduction_multi_02.py \
     --csv_filepath ${FILEPATH} \
     --csv_filename ${FILENAME} \
     --data_length 700 \
@@ -30,13 +30,15 @@ python3 ./reproduction_multi_01.py \
     --test_value ${TEST_VALUE} \
     --test_duration ${TEST_DURATION} \
     --test_name ${TEST} \
-    --reservoir_num 3 \
-    --N_x 400 400 400 \
-    --lamb 0.24 0.24 0.24 \
-    --rho 0.9 0.9 0.9 \
-    --leaking_rate 0.1 0.5 0.9 \
+    --reservoir_num 1 \
+    --N_x 1200 \
+    --lamb 0.24 \
+    --rho 0.9 \
+    --leaking_rate 0.1 \
     --figure_save_path ${FIG_SAVE_PATH} \
     --figure_save_name ${FIG_SAVE_NAME} \
+    --csv_seed 116 \
+    --reservoir_seed 721 \
 
 
 
