@@ -236,22 +236,22 @@ def makeFig2(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450
     viewLen = 2450
 
     # サイズ調整
-    fig = plt.figure(figsize=[12, 4])
+    fig = plt.figure(figsize=[5, 4])
 
-    ax1 = fig.add_subplot(1, 2, 1)
-    ax1.set_title("Input", fontsize=20)
-    # ax1.set_yscale("log")
-    ax1.plot(tLabel[-viewLen:], color='k', label="input")
-    hideValue = [x * 5 + args.bias for x in args.test_value]
-    hideLabel = md.makeDiacetylData(hideValue, args.test_duration).reshape(-1, 1)
-    ax1.plot(hideLabel[-viewLen:], alpha=0.0)
-    ax1.set_xlabel("frame")
+    # ax1 = fig.add_subplot(1, 2, 1)
+    # ax1.set_title("Input", fontsize=20)
+    # # ax1.set_yscale("log")
+    # ax1.plot(tLabel[-viewLen:], color='k', label="input")
+    # hideValue = [x * 5 + args.bias for x in args.test_value]
+    # hideLabel = md.makeDiacetylData(hideValue, args.test_duration).reshape(-1, 1)
+    # ax1.plot(hideLabel[-viewLen:], alpha=0.0)
+    # ax1.set_xlabel("frame")
     # plt.plot([0, int(DETAIL*testLen)], [0.5, 0.5], color='k', linestyle = ':')
     # plt.ylim(0.3, 3.3)
     # plt.xlim(500, 2000)
     # plt.legend(loc="upper right")
 
-    ax2 = fig.add_subplot(1, 2, 2)
+    ax2 = fig.add_subplot(1, 1, 1)
     ax2.set_title("Output", fontsize=20)
     # plt.plot(pred, label="predict")
     ax2.plot(tY[-viewLen:], label="model")
@@ -383,7 +383,7 @@ def main():
 
         # マスク指定
         N_x = args.N_x[i] # ノード数
-        inputMasks.append([1 if i<32  else 0 for i in range(N_x)]) # 入力ノード(1 が有効，0 が無効)
+        inputMasks.append([1 if i<128 else 0 for i in range(N_x)]) # 入力ノード(1 が有効，0 が無効)
         outputMasks.append([1 if i<128 else 0 for i in range(N_x)]) # 出力ノード
 
         # モデルを作る
@@ -436,7 +436,7 @@ def main():
     # model.Reservoir.reset_reservoir_state()
     # testY = model.run(testLabel)
 
-    makeFig(saveFig, model, testLabel, testData, testDataStd, testY, RMSE, NRMSE)
+    makeFig2(saveFig, model, testLabel, testData, testDataStd, testY, RMSE, NRMSE)
 
 
 
