@@ -15,24 +15,31 @@ TEST_VALUE="0 1 0"
 TEST_DURATION="300 200 200"
 
 # test時に予測するジアセチルの濃度(複数可)
-TEST_LIST="10-5 10-6 10-7 10-8 10-9 0"
+TEST_LIST="10-6"
 
 # 画像保存場所
-FIG_SAVE_PATH="../output/20240126/"
-FIG_SAVE_NAME_BASE="test_N2_300_result"
+FIG_SAVE_PATH="../output/20240612/"
+FIG_SAVE_NAME_BASE="result_106_nx1200_lr01_03.png"
 
 
 for TEST in ${TEST_LIST}
 do 
 
-    for CSV_SEED in `seq 0 100 500`
+    for CSV_SEED in 116 # 126 136 146 156
+    do
+
+    for RES_SEED in 721 # 722 723 724 725
+    do
+
+    for LEAK_RATE1 in 0.1
     do 
 
-        for RES_SEED in `seq 0 10 50`
+        for LEAK_RATE2 in 0.1
         do 
 
             # ファイル名生成
-            FIG_SAVE_NAME="${FIG_SAVE_NAME_BASE}_${TEST}_cs${CSV_SEED}_rs${RES_SEED}.png"
+            # FIG_SAVE_NAME="${FIG_SAVE_NAME_BASE}_${TEST}_lr${LEAK_RATE1}_lr${LEAK_RATE2}_cs${CSV_SEED}_rs${RES_SEED}.png"
+            FIG_SAVE_NAME="${FIG_SAVE_NAME_BASE}"
 
             python3 ./reproduction_multi_01.py \
                 --csv_filepath ${FILEPATH} \
@@ -43,11 +50,11 @@ do
                 --test_value ${TEST_VALUE} \
                 --test_duration ${TEST_DURATION} \
                 --test_name ${TEST} \
-                --reservoir_num 3 \
-                --N_x 400 400 400\
-                --lamb 0.24 0.24 0.24 \
-                --rho 0.9 0.9 0.9 \
-                --leaking_rate 0.1 0.5 0.9 \
+                --reservoir_num 1 \
+                --N_x 1200 \
+                --lamb 0.24 \
+                --rho 0.9 \
+                --leaking_rate ${LEAK_RATE1} \
                 --figure_save_path ${FIG_SAVE_PATH} \
                 --figure_save_name ${FIG_SAVE_NAME} \
                 --csv_seed ${CSV_SEED} \
@@ -57,6 +64,8 @@ do
 
         done
 
+    done
+    done
     done
 
 done
