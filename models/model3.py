@@ -170,9 +170,9 @@ class ReservoirLayer(BaseLayer):
         param inputVector: 入力状態ベクトル
         return: 更新後の値(cupy)
         '''
-        # ノード数と同じshapeにリサイズ(追加分は0埋め)
+        # ノード数と同じshapeにリサイズ
         inputVector = cp.resize(inputVector, self.nodeNum)
-        inputVector[len(inputVector):] = 0
+        # inputVector[len(inputVector):] = 0
 
         self.internalState = \
         (1.0 - self.leakingRate) * self.internalState + \
@@ -436,14 +436,14 @@ class ESN:
             self.noise = None
         else:
             cp.random.seed(seed=0)
-            self.noise = cp.random.uniform(-noiseLevel, noiseLevel, (self.reservoirLayer.nodeNum))
+            self.noise = cp.random.uniform(-noiseLevel, noiseLevel, (self.reservoirLayer.inputDimention))
 
         # 分類問題か否か
         if classification:
             if averageWindow is None:
                 raise ValueError("Window for time average is not given!")
             else:
-                self.window = cp.zeros((averageWindow, self.reservoirLayer.nodeNum))
+                self.window = cp.zeros((averageWindow, self.reservoirLayer.outputDimention))
 
 
     # バッチ学習
