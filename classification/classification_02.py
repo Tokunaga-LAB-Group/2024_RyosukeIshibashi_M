@@ -377,7 +377,7 @@ def main():
 
     #### ESN
     
-    model = ESN(inputLayer, reservoirLayer, outputLayer, classification=True, averageWindow=50)
+    model = ESN(inputLayer, reservoirLayer, outputLayer)
 
     optimizer = Tikhonov(outputLayer.inputDimention, outputLayer.outputDimention, args.tikhonov_beta)
 
@@ -422,6 +422,18 @@ def main():
     # testY = model.run(testLabel)
 
     makeFig2(saveFig, model, cp.asnumpy(testGT), cp.asnumpy(testInput), cp.asnumpy(testDataStd), cp.asnumpy(testY), 0, 0)
+
+
+    # # csvファイルに記録
+    # with open(args.figure_save_path + 'classification_lr_cs_rs_01.csv', 'a') as f:
+    #     writer = csv.writer(f)
+    #     stim = args.test_name[0]
+    #     [leak1] = args.leaking_rate
+    #     # [nodeNum] = args.N_x
+    #     # reservoir_num = args.reservoir_num
+    #     cs = args.csv_seed
+    #     rs = args.reservoir_seed
+    #     writer.writerow([stim, leak1, RMSE, NRMSE, cs, rs])
 
 
 
