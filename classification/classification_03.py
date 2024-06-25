@@ -90,6 +90,46 @@ def getArg():
     return parser.parse_args()
 
 
+# データセット作成
+def makeDataset(rawData, rawLabel, dataLen, transLen=100, suffle=None):
+    '''
+    param rawData: 元データ
+    param rawLabel: 元データに対応するラベルデータ
+    param dataLen: 一つのデータの長さ
+    param transLen: 過渡期の長さ
+    param suffle: データをシャッフルするときのシード値 未指定ならシャッフルしない
+    return: (加工済みのデータ, 加工済みのクラスラベル)
+    '''
+
+    BIAS = args.bias # 定常状態用
+
+    TRAIN_VALUE = args.train_value
+    TRAIN_DURATION = args.train_duration # 継続時間
+
+    processData = []
+    processLabel = []
+    for data, label in zip(rawData, rawLabel):
+        # ラベルデータを作る
+        value = [x * label + BIAS for x in TRAIN_VALUE]
+        inputLabel = md.makeDiacetylData(value, TRAIN_DURATION)
+
+        for frame in range(0, len(data)-transLen, dataLen):
+            processData.append(data[frame:frame+transLen+dataLen])
+            processLabel.append(inputLabel[frame:frame+transLen+dataLen])
+
+    # 対応関係を保ったままシャッフル
+    if suffle != None:
+        cp.random.seed(suffle)
+        index = cp.random.permutation(len(processData))
+        processData = processData[index]
+        processLabel = processLabel[index]
+    
+    processData = cp.array(processData)
+    processLabel = cp.array(processLabel)
+
+    return processData, processLabel
+
+
 
 # 出力画像生成
 def makeFig(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450,):
@@ -236,22 +276,20 @@ def makeFig2(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450
     viewLen = 2450
 
     # サイズ調整
-    fig = plt.figure(figsize=[5, 4])
+    fig = plt.figure(figsize=[10, 4])
 
-    # ax1 = fig.add_subplot(1, 2, 1)
-    # ax1.set_title("Input", fontsize=20)
-    # # ax1.set_yscale("log")
-    # ax1.plot(tLabel[-viewLen:], color='k', label="input")
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax1.set_title("Input", fontsize=20)
+    # ax1.set_yscale("log")
+    ax1.plot(tLabel[-viewLen:], color='k', linewidth=0.5, label="input")
     # hideValue = [x * 5 + args.bias for x in args.test_value]
     # hideLabel = md.makeDiacetylData(hideValue, args.test_duration).reshape(-1, 1)
     # ax1.plot(hideLabel[-viewLen:], alpha=0.0)
-    # ax1.set_xlabel("frame")
-    # plt.plot([0, int(DETAIL*testLen)], [0.5, 0.5], color='k', linestyle = ':')
-    # plt.ylim(0.3, 3.3)
-    # plt.xlim(500, 2000)
-    # plt.legend(loc="upper right")
+    ax1.grid(linestyle=":")
+    ax1.set_xlabel("frame")
+    ax1.legend()
 
-    ax2 = fig.add_subplot(1, 1, 1)
+    ax2 = fig.add_subplot(1, 2, 2)
     ax2.set_title("Output", fontsize=20)
     # plt.plot(pred, label="predict")
     ax2.plot(tY[-viewLen:], label="model")
@@ -325,7 +363,7 @@ def main():
     else:
         periodValue = args.train_period_value
         periodDura = args.train_period_duration
-        trainPeriod = md.makeSquareWave(periodValue, periodDura)
+        # trainPeriod = md.makeSquareWave(periodValue, periodDura)
 
     csvFname = []
     for fname in args.csv_filename:
@@ -342,40 +380,22 @@ def main():
     trainInput = []
     trainGT = []
     csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300, args.csv_seed)
-    for gt, input in zip(csvData, inputData):
-        trainGT.append(gt)
-        value = [x * input + BIAS for x in TRAIN_VALUE]
-        trainInput.append(md.makeDiacetylData(value, TRAIN_DURATION))
 
-    # trainData = cp.array(trainData).reshape(-1, 1)
-    # trainLabel = cp.array(trainLabel).reshape(-1, 1)
-    # trainPeriod = cp.tile(trainPeriod, len(datas)) if trainPeriod is not None else None
-
-    # テストデータ
-    inputLabel = {"10-5":5, "10-6":4, "10-7":3, "10-8":2, "10-9":1, "0":0} # エレガントじゃない
-    testGT = []
-    testGTStd = []
-    testInput = []
-    # if TEST is None: # テスト対象未指定なら全部でやる
-    #     TEST = ["10-5", "10-6", "10-7", "10-8", "10-9", "0"]
-    for test in TEST:
-        testGT = csvDatasMean[test]
-        testGTStd = csvDatasStd[test]
-        value = [x * inputLabel[test] + BIAS for x in TEST_VALUE]
-        testInput = md.makeDiacetylData(value, TRAIN_DURATION)
-
-    # testData = cp.array(testData)
-    # testDataStd = cp.array(testDataStd)
-    # testValue = cp.array(testValue)
-    # testLabel = md.makeDiacetylData(testValue, TEST_DURATION).reshape(-1, 1)
+    # データセット作成
+    classData, classLabel = makeDataset(csvData, inputData, 100)
+    trainInput = classData[:800]
+    trainGT = classLabel[:800]
+    testInput = classData[809:]
+    testGT = classLabel[809:]
 
 
-    # cupyに変換
+    # cupyに変換とか
     trainInput = cp.array(trainInput)
     trainGT = cp.array(trainGT)
-    testInput = cp.array(testInput)
-    testGT = cp.array(testGT)
+    testInput = testInput.reshape(-1)
+    testGT = testGT.reshape(-1)
 
+    # print(testInput.shape)
 
     # モデル生成
 
@@ -402,7 +422,7 @@ def main():
     # 学習
 
     # train
-    trainOutput = model.trainMini(trainInput, trainGT, optimizer, transLen=200)
+    trainOutput = model.trainMini(trainInput, trainGT, optimizer, transLen=100)
 
     # print(outputLayer.internalConnection.shape)
 
@@ -431,20 +451,20 @@ def main():
     # model.Reservoir.reset_reservoir_state()
     # testY = model.run(testLabel)
 
-    # makeFig2(saveFig, model, cp.asnumpy(testInput), cp.asnumpy(testGT), cp.asnumpy(testGTStd), cp.asnumpy(testOutput), RMSE, NRMSE)
+    makeFig2(saveFig, model, cp.asnumpy(testInput), cp.asnumpy(testGT), cp.asnumpy(testGT), cp.asnumpy(testOutput), RMSE, NRMSE)
 
 
-    # csvファイルに記録
-    with open(args.figure_save_path + 'reproduction_lr_be_cs_rs_02.csv', 'a') as f:
-        writer = csv.writer(f)
-        stim = args.test_name[0]
-        leak = args.leaking_rate
-        # nodeNum = args.N_x
-        # reservoir_num = args.reservoir_num
-        beta = args.tikhonov_beta
-        cs = args.csv_seed
-        rs = args.reservoir_seed
-        writer.writerow([stim, leak, beta, cs, rs, RMSE, NRMSE])
+    # # csvファイルに記録
+    # with open(args.figure_save_path + 'classification_lr_be_cs_rs_02.csv', 'a') as f:
+    #     writer = csv.writer(f)
+    #     stim = args.test_name[0]
+    #     leak = args.leaking_rate
+    #     # nodeNum = args.N_x
+    #     # reservoir_num = args.reservoir_num
+    #     beta = args.tikhonov_beta
+    #     cs = args.csv_seed
+    #     rs = args.reservoir_seed
+    #     writer.writerow([stim, leak, beta, cs, rs, RMSE, NRMSE])
 
 
 
@@ -456,7 +476,7 @@ def main():
 # メイン関数
 if __name__ == "__main__":
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
     args = getArg()
     main()
