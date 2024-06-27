@@ -337,7 +337,12 @@ class Tikhonov:
 
         return WoutOpt
     
-        # 各ハイパーパラメータの情報
+    # 初期化
+    def resetValue(self):
+        self.X_XT = cp.zeros((self.outLayerInDim, self.outLayerInDim))
+        self.D_XT = cp.zeros((self.outLayerOutDim, self.outLayerInDim))
+
+    # 各ハイパーパラメータの情報
     def info(self):
         '''
         return: クラスメンバの名称と値
@@ -503,6 +508,90 @@ class ESN:
             # self.prevOutputVector = grandTruth # フィードバックで使う
 
         # 学習済みの出力結合重み行列を設定
+        self.outputLayer.setOptWeight(optimizer.getWoutOpt())
+
+        # モデル出力
+        return Y
+    
+
+    # ミニバッチ学習
+    def trainMini(self, U, D, optimizer:Tikhonov, transLen = None):
+        '''
+        param U: 入力データ，ミニバッチ数*inputDimention*データ長
+        param D: 入力データに対する正解データ，ミニバッチ数*outputDimention*データ長
+        param optimizer: 学習器
+        param transLen: 過渡期の長さ
+        return: 学習前のモデル出力， outputDimention*データ長
+        '''
+
+        WoutOpt = cp.empty(0)
+        Y = cp.empty(0)
+        miniSize = 0
+        
+        for udi in tqdm(range(len(U))):
+            # ミニバッチごとにデータ取り出し
+            u = U[udi]
+            d = D[udi]
+            miniSize += 1
+
+            trainLen = len(u)
+            if transLen is None:
+                transLen = 0 # デフォルトで0にすればいいのでは？
+
+            # 時間発展
+            for n in range(trainLen):
+
+                #### input layer
+                inputVector = self.inputLayer(u[n])
+
+                # # フィードバック結合
+                # if self.Feedback is not None:
+                #     x_back = self.Feedback(self.y_prev)
+                #     # x_back[self.input_num:] = 0
+                #     # print(x_in.shape, x_back.shape)
+                #     x_in += x_back
+
+                # ノイズ付与
+                if self.noise is not None:
+                    inputVector += self.noise
+
+
+                #### Reservoir layer
+                reservoirVector = self.reservoirLayer(inputVector)
+
+                # 分類問題の場合は窓幅分の平均を取得(要修正)
+                if self.classification:
+                    self.window = cp.append(self.window, reservoirVector.reshape(1, -1), axis = 0)
+                    self.window = cp.delete(self.window, 0, 0)
+                    reservoirVector = cp.average(self.window, axis = 0)
+
+                #### output layer
+
+                # 目標値
+                grandTruth = d[n]
+                grandTruth = self.invOutputFunc(grandTruth)
+
+                # 学習器
+                if n > transLen: # 過渡期を過ぎたら
+                    optimizer(grandTruth, self.reservoirLayer.internalState[:self.outputLayer.inputDimention])
+
+                # 学習前のモデル出力
+                outputVector = self.outputLayer(reservoirVector, u[n])
+                Y = cp.append(Y, self.outputFunc(outputVector))
+                # self.prevOutputVector = grandTruth # フィードバックで使う
+
+            # # ミニバッチ単位で重み計算
+            # if len(WoutOpt) == 0:
+            #     WoutOpt = optimizer.getWoutOpt()
+            # WoutOpt += optimizer.getWoutOpt()
+
+            # # 重み初期化
+            # optimizer.resetValue()
+            # リザバー層の内部状態初期化
+            self.reservoirLayer.resetReservoirState()
+
+        # 学習済みの出力結合重み行列を設定
+        # self.outputLayer.setOptWeight(WoutOpt / miniSize)
         self.outputLayer.setOptWeight(optimizer.getWoutOpt())
 
         # モデル出力
