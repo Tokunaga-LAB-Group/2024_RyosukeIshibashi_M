@@ -414,37 +414,42 @@ class ESN:
                  inputLayer: InputLayer,
                  reservoirLayer: ReservoirLayer,
                  outputLayer: OutputLayer,
-                 noiseLevel = None,
+                 feedbackLeyer:FeedbackLayer = None,
                  outputFunc = identify,
                  invOutputFunc = identify,
+                 noiseLevel = None,
                  classification = False,
                  averageWindow = None,
                 ):
         '''
-        param noiseLevel: 入力に付与するノイズの大きさ
+        param inputLayer: 入力層
+        param reservoirLayer: リザバー層
+        param outputLayer: 出力層
+        param feedbackLayer: フィードバック層 (teacher forcing 専用)
         param outputFunc: 出力層の非線形関数
         param invOutputFunc: output_funcの逆関数←何に使うの...?
+        param noiseLevel: 入力に付与するノイズの大きさ
         param classification: 分類問題の場合はtrue
         param averageWindow: 分類問題で平均出力する窓幅
         '''
         self.inputLayer = inputLayer
         self.reservoirLayer = reservoirLayer
         self.outputLayer = outputLayer
-        self.y_prev = cp.zeros(reservoirLayer.nodeNum)
+        self.feedbackLayer = feedbackLeyer
         self.outputFunc = outputFunc
         self.invOutputFunc = invOutputFunc
+        self.noiseLevel = noiseLevel
         self.classification = classification
         self.params = {"InputLayer":self.inputLayer.info(), 
                        "ReservoirLayer":self.reservoirLayer.info(),
                        "OutputLayer":self.outputLayer.info(),
+                       "FeedbackLayer":self.feedbackLayer.info(),
                        "ESN":{"outputFunc":outputFunc, "invOutputFunc":invOutputFunc, 
+                              "noiseLevel":noiseLevel,
                               "classification":classification, "averageWindow":averageWindow}}
 
-        # # 出力層からリザバーへのフィードバックの有無
-        # if fb_scale is None:
-        #     self.Feedback = None
-        # else:
-        #     self.Feedback = Feedback(N_y, N_x, fb_scale, fb_seed)
+        # 出力層からリザバー層へのフィードバック用のベクトル
+        self.prevOutputVector = cp.zeros(self.reservoirLayer.outputDimention)
 
         # リザバーの状態更新におけるノイズの有無
         if noiseLevel is None:
@@ -481,12 +486,10 @@ class ESN:
             #### input layer
             inputVector = self.inputLayer(U[n])
 
-            # # フィードバック結合
-            # if self.Feedback is not None:
-            #     x_back = self.Feedback(self.y_prev)
-            #     # x_back[self.input_num:] = 0
-            #     # print(x_in.shape, x_back.shape)
-            #     x_in += x_back
+            # フィードバック結合
+            if self.feedbackLayer is not None:
+                feedbackVector = self.feedbackLayer(self.prevOutputVector)
+                inputVector += feedbackVector
             
             # ノイズ付与
             if self.noise is not None:
@@ -515,7 +518,7 @@ class ESN:
             # 学習前のモデル出力
             outputVector = self.outputLayer(reservoirVector, U[n])
             Y = cp.append(Y, self.outputFunc(outputVector))
-            # self.prevOutputVector = grandTruth # フィードバックで使う
+            self.prevOutputVector = grandTruth # フィードバックで使う
 
         # 学習済みの出力結合重み行列を設定
         self.outputLayer.setOptWeight(optimizer.getWoutOpt())
@@ -554,12 +557,10 @@ class ESN:
                 #### input layer
                 inputVector = self.inputLayer(u[n])
 
-                # # フィードバック結合
-                # if self.Feedback is not None:
-                #     x_back = self.Feedback(self.y_prev)
-                #     # x_back[self.input_num:] = 0
-                #     # print(x_in.shape, x_back.shape)
-                #     x_in += x_back
+                # フィードバック結合
+                if self.feedbackLayer is not None:
+                    feedbackVector = self.feedbackLayer(self.prevOutputVector)
+                    inputVector += feedbackVector
 
                 # ノイズ付与
                 if self.noise is not None:
@@ -588,7 +589,7 @@ class ESN:
                 # 学習前のモデル出力
                 outputVector = self.outputLayer(reservoirVector, u[n])
                 Y = cp.append(Y, self.outputFunc(outputVector))
-                # self.prevOutputVector = grandTruth # フィードバックで使う
+                self.prevOutputVector = grandTruth # フィードバックで使う
 
             # # ミニバッチ単位で重み計算
             # if len(WoutOpt) == 0:
@@ -623,13 +624,11 @@ class ESN:
             #### input layer
             inputVector = self.inputLayer(U[n])
 
-            # # フィードバック結合
-            # if self.Feedback is not None:
-            #     # print(self.y_prev.shape)
-            #     x_back = self.Feedback(self.y_prev)
-            #     # x_back[self.input_num:] = 0
-            #     x_in += x_back
-            
+            # フィードバック結合
+            if self.feedbackLayer is not None:
+                feedbackVector = self.feedbackLayer(self.prevOutputVector)
+                inputVector += feedbackVector
+
             #### Reservoir layer
             reservoirVector = self.reservoirLayer(inputVector)
 
@@ -644,7 +643,7 @@ class ESN:
             # 学習後のモデル出力
             outputVector = self.outputLayer(reservoirVector, U[n])
             predictY = cp.append(predictY, self.outputFunc(outputVector))
-            # self.y_prev = y_pred
+            self.prevOutputVector = outputVector
 
         # モデル出力(学習後)
         return predictY
