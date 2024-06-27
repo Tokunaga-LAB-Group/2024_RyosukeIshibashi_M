@@ -251,28 +251,38 @@ class OutputLayer(BaseLayer):
         return info
 
 
-# # 出力フィードバック
-# class Feedback:
-#     # フィードバック結合重み行列の初期化
-#     def __init__(self, N_y, N_x, fb_scale, seed=0):
-#         '''
-#         param N_y: 出力次元
-#         param N_x: リザバーのノード数
-#         param fb_scale: フィードバックスケーリング(フィードバックの強さ)
-#         '''
-#         # 一様分布に従う乱数
-#         np.random.seed(seed = seed)
-#         self.Wfb = np.random.uniform(-fb_scale, fb_scale, (N_x, N_y))
-#         # print(self.Wfb.shape)
+# 出力フィードバック
+class FeedbackLayer(BaseLayer):
+    # フィードバック結合重み行列の初期化
+    def __init__(self, inDim, outDim, feedbackScale, seed=0):
+        '''
+        param inDim: 出力次元
+        param outDim: 出力次元 (リザバー層の入力次元と揃える)
+        param fb_scale: フィードバックスケーリング(フィードバックの強さ)
+        param seed: 内部結合初期化のシード値
+        '''
+        super().__init__(inDim, outDim)
+        self.feedbackScale = feedbackScale
+        self.seed = seed
+
+        # 一様分布に従う乱数
+        cp.random.seed(seed = seed)
+        # 内部結合設定
+        self.internalConnection = cp.random.uniform(-self.feedbackScale, self.feedbackScale, (outDim, inDim))
+        # print(self.Wfb.shape)
     
-#     # フィードバック結合重み行列による重みづけ
-#     def __call__(self, y):
-#         '''
-#         param y: N_y次元のベクトル
-#         return: N_x次元のベクトル
-#         '''
-#         # print(np.dot(self.Wfb, y).shape)
-#         return cp.asnumpy(cp.dot(self.Wfb, y))
+
+    # 各ハイパーパラメータの情報
+    def info(self):
+        '''
+        return: クラスメンバの名称と値
+        '''
+        myInfo = {"feedbackScale":self.feedbackScale, "seed":self.seed}
+
+        info = super().info()
+        info.update(myInfo)
+
+        return info
 
 
 
