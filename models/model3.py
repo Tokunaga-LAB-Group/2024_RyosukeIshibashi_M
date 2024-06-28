@@ -256,7 +256,7 @@ class FeedbackLayer(BaseLayer):
     # フィードバック結合重み行列の初期化
     def __init__(self, inDim, outDim, feedbackScale, seed=0):
         '''
-        param inDim: 出力次元
+        param inDim: 入力次元 (出力層の出力次元と揃える)
         param outDim: 出力次元 (リザバー層の入力次元と揃える)
         param fb_scale: フィードバックスケーリング(フィードバックの強さ)
         param seed: 内部結合初期化のシード値
@@ -268,7 +268,7 @@ class FeedbackLayer(BaseLayer):
         # 一様分布に従う乱数
         cp.random.seed(seed = seed)
         # 内部結合設定
-        self.internalConnection = cp.random.uniform(-self.feedbackScale, self.feedbackScale, (outDim, inDim))
+        self.internalConnection = cp.random.uniform(-feedbackScale, feedbackScale, (outDim, inDim))
         # print(self.Wfb.shape)
     
 
@@ -443,7 +443,7 @@ class ESN:
         self.params = {"InputLayer":self.inputLayer.info(), 
                        "ReservoirLayer":self.reservoirLayer.info(),
                        "OutputLayer":self.outputLayer.info(),
-                       "FeedbackLayer":self.feedbackLayer.info(),
+                       "FeedbackLayer":self.feedbackLayer.info() if not self.feedbackLayer == None else None,
                        "ESN":{"outputFunc":outputFunc, "invOutputFunc":invOutputFunc, 
                               "noiseLevel":noiseLevel,
                               "classification":classification, "averageWindow":averageWindow}}
