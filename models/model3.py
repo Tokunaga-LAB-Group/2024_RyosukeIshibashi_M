@@ -420,7 +420,7 @@ class Tikhonov:
         '''
         return: クラスメンバの名称と値
         '''
-        info = {"method":"Tikhonov", "OutputLayerInputDim":self.outLayerInDim, "OutputLayerOutputDim":self.outLayerOutDim, "beta": self.beta}
+        info = {"method":"Tikhonov", "outLayerInDim":self.outLayerInDim, "outLayerOutDim":self.outLayerOutDim, "beta": self.beta}
 
         return info
 
