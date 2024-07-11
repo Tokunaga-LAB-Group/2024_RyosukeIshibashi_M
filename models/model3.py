@@ -420,7 +420,7 @@ class Tikhonov:
         '''
         return: クラスメンバの名称と値
         '''
-        info = {"method":"Tikhonov", "nodeNum":self.nodeNum, "outputDimention":self.outputDimention, "beta": self.beta}
+        info = {"method":"Tikhonov", "OutputLayerInputDim":self.outLayerInDim, "OutputLayerOutputDim":self.outLayerOutDim, "beta": self.beta}
 
         return info
 
@@ -538,6 +538,10 @@ class ESN:
         param transLen: 過渡期の長さ
         return: 学習前のモデル出力，データ長*outputDimention
         '''
+
+        # 最適化手法についての情報記録
+        self.params["optimizer"] = optimizer.info()
+
         trainLen = len(U)
         if transLen is None:
             transLen = 0 # デフォルトで0にすればいいのでは？
@@ -599,6 +603,9 @@ class ESN:
         param transLen: 過渡期の長さ
         return: 学習前のモデル出力， outputDimention*データ長
         '''
+
+        # 最適化手法についての情報記録
+        self.params["optimizer"] = optimizer.info()
 
         WoutOpt = cp.empty(0)
         Y = cp.empty(0)
