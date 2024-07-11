@@ -251,6 +251,69 @@ class OutputLayer(BaseLayer):
         return info
 
 
+# パラレルリザバー
+class ParallelReservoirLayer(BaseLayer):
+    # 入力結合重み行列W_inの初期化
+    def __init__(self, inDim, outDim, layers:list[tuple[InputLayer, ReservoirLayer]], connected=False, seed=0):
+        '''
+        param inDim: 入力次元
+        param outDim: 出力次元 (リザバー層の出力次元の合計と合わせる)
+        param layers: (入力層, リザバー層) のリスト (入力層の入力次元はinDimと合わせる)
+        param connected: リザバー層間で接続があるか否か Trueで接続あり
+        param seed: 内部結合初期化のシード値
+        '''
+        super().__init__(inDim, outDim)
+        self.layers = layers
+        self.connected = connected
+        self.seed = seed
+        # 一様分布に従う乱数
+        cp.random.seed(seed=seed)
+
+        # 内部結合設定
+        self.internalConnection = cp.random.uniform(-1, 1, (outDim, inDim))
+
+
+    # 入力結合重み行列による重みづけ
+    def __call__(self, inputVector):
+        '''
+        param inputVector: 入力状態ベクトル
+        return: 更新後の値(cupy)
+        '''
+        self.internalState = cp.empty(0)
+        for (input, reservoir) in self.layers:
+            inputsVector = input(inputVector)
+            reservoirsVector = reservoir(inputsVector)
+            # エラー出るかも
+            self.internalState = cp.append(self.internalState, reservoirsVector)
+
+        # return cp.dot(self.internalConnection, self.internalState)
+        return self.internalState
+
+
+    # リザバー状態ベクトルの初期化
+    def resetReservoirState(self):
+        for (_, reservoir) in self.layers:
+            reservoir.resetReservoirState()
+
+
+    # 各ハイパーパラメータの情報
+    def info(self):
+        '''
+        return: クラスメンバの名称と値
+        '''
+        layersInfo = {}
+        for i in range(len(self.layers)):
+            (input, reservoir) = self.layers[i]
+            layersInfo[f"layer[{i}]"] = {"inputsLayer":input.info(), "reservoirLayer":reservoir.info()}
+        myInfo = {"layers":layersInfo, "connected":self.connected, "seed":self.seed}
+
+        info = super().info()
+        info.update(myInfo)
+
+        return info
+
+
+
 # 出力フィードバック
 class FeedbackLayer(BaseLayer):
     # フィードバック結合重み行列の初期化
@@ -449,7 +512,7 @@ class ESN:
                               "classification":classification, "averageWindow":averageWindow}}
 
         # 出力層からリザバー層へのフィードバック用のベクトル
-        self.prevOutputVector = cp.zeros(self.reservoirLayer.outputDimention)
+        self.prevOutputVector = cp.zeros(self.outputLayer.outputDimention)[0] # エラー出ると思う
 
         # リザバーの状態更新におけるノイズの有無
         if noiseLevel is None:
@@ -643,7 +706,7 @@ class ESN:
             # 学習後のモデル出力
             outputVector = self.outputLayer(reservoirVector, U[n])
             predictY = cp.append(predictY, self.outputFunc(outputVector))
-            self.prevOutputVector = outputVector
+            self.prevOutputVector = outputVector[0] # エラー出ると思う
 
         # モデル出力(学習後)
         return predictY
