@@ -14,7 +14,7 @@ import csv
 import cupy as cp
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from models.model3 import InputLayer, ReservoirLayer, OutputLayer, ESN, Tikhonov
+from models.model3 import InputLayer, ReservoirLayer, OutputLayer, ESN, Tikhonov, ParallelReservoirLayer
 from orglib import make_dataset as md
 from orglib import stegano as stg
 from orglib import read_csv as rc
@@ -119,32 +119,32 @@ if __name__ == "__main__":
     print("main")
 
 
-    # ファイルパスとファイル名(複数可)
-    FILEPATH="input/"
-    FILENAME="data_10-6_N2_300.csv"
+    # # ファイルパスとファイル名(複数可)
+    # FILEPATH="input/"
+    # FILENAME="data_10-6_N2_300.csv"
 
-    csvFname = []
-    csvFname.append(FILEPATH + FILENAME)
-    csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300, 0)
+    # csvFname = []
+    # csvFname.append(FILEPATH + FILENAME)
+    # csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300, 0)
 
-    csvData = cp.array(csvData)
-    print(csvData.shape)
+    # csvData = cp.array(csvData)
+    # print(csvData.shape)
 
 
-    fig = plt.figure(figsize=[6, 3])
+    # fig = plt.figure(figsize=[6, 3])
 
-    ax1 = fig.add_subplot(1,1,1)
-    ax1.set_title("Data", fontsize=15)
-    ax1.plot(cp.asnumpy(csvData[0:5].T), linewidth=0.3)
-    ax1.grid(linestyle=":")
-    ax1.set_xlabel("frame")
+    # ax1 = fig.add_subplot(1,1,1)
+    # ax1.set_title("Data", fontsize=15)
+    # ax1.plot(cp.asnumpy(csvData[0:5].T), linewidth=0.3)
+    # ax1.grid(linestyle=":")
+    # ax1.set_xlabel("frame")
 
-    # ax1.legend()
+    # # ax1.legend()
 
-    # 生成するファイル名
-    fname = "output/20240603/dataset106.png"
-    # 保存
-    plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
+    # # 生成するファイル名
+    # fname = "output/20240603/dataset106.png"
+    # # 保存
+    # plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
     #### make data
     # trainGT, trainInput, testGT, testInput = nFramePredict(1000, 700, 30, 1, 100, 0.1)
@@ -158,17 +158,26 @@ if __name__ == "__main__":
     inputLayer = InputLayer(1, 16, inputScale=1)
 
     # Reservoir
-    reservoirLayer = ReservoirLayer(16, 32, nodeNum, 0.2, 0.95, cp.tanh, 0.22)
+    # reservoirLayer = ReservoirLayer(16, 64, nodeNum, 0.2, 0.95, cp.tanh, 0.22)
+
+    resInput1 = InputLayer(16, 32, inputScale=1, seed=10)
+    resRes1 = ReservoirLayer(32, 48, nodeNum, 0.2, 0.95, cp.tanh, 0.22, seed=101)
+
+    resInput2 = InputLayer(16, 16, inputScale=1, seed=11)
+    resRes2 = ReservoirLayer(16, 16, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=102)
+    
+    reservoirLayer = ParallelReservoirLayer(16, 64, [(resInput1, resRes1), (resInput2, resRes2)])
+
 
     # Output
-    outputLayer = OutputLayer(32, 1)
+    outputLayer = OutputLayer(64, 1)
 
 
     #### ESN
     
     model = ESN(inputLayer, reservoirLayer, outputLayer)
 
-    optimizer = Tikhonov(outputLayer.inputDimention, outputLayer.outputDimention, 0.1)
+    optimizer = Tikhonov(outputLayer.inputDimention, outputLayer.outputDimention, 0.00001)
 
     # print(outputLayer.internalConnection.shape)
 
@@ -205,7 +214,7 @@ if __name__ == "__main__":
     ax2.legend()
 
     # 生成するファイル名
-    fname = "output/20240524/test09.png"
+    fname = "output/20240711/test09.png"
     # 保存
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
