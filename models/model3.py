@@ -199,58 +199,6 @@ class ReservoirLayer(BaseLayer):
         return info
 
 
-
-# 出力層
-class OutputLayer(BaseLayer):
-    # 出力結合重み行列の初期化
-    def  __init__(self, inDim, outDim, bias=False, ud=0, seed=0):
-        '''
-        param inDim: 入力次元
-        param outDim: 出力次元
-        param bias: バイアスの有無(入力値を直接出力層に持っていくか否か)
-        param ud: 入力値の次元
-        param seed: 内部結合初期化のシード値
-        '''
-        super().__init__(inDim, outDim)
-        
-        # バイアスの設定
-        self.bias = bias
-        if self.bias:
-            self.inputDimention += ud
-
-        # 正規分布に従う乱数
-        cp.random.seed(seed=seed)
-        self.internalConnection = cp.random.normal(size=(self.outputDimention, self.inputDimention))
-
-    # バイアスに対応
-    def __call__(self, inputVector, U):
-        '''
-        param inputVector: 入力状態ベクトル
-        param U: モデルへの入力値
-        return: 更新後の値(cupy)
-        '''
-        if self.bias:
-            inputVector = cp.append(inputVector, U)
-
-        return super().__call__(inputVector)
-
-    # 学習済みの出力結合重み行列を設定
-    def setOptWeight(self, incnOpt):
-        '''
-        param incnOpt: 学習済みの出力結合重み
-        '''
-        super().setIntCon(incnOpt)
-
-    # 各ハイパーパラメータの情報
-    def info(self):
-        '''
-        return: クラスメンバの名称と値
-        '''
-        info = {"inputDimention": self.inputDimention, "outputDimention":self.outputDimention, "bias":self.bias}
-        
-        return info
-
-
 # パラレルリザバー
 class ParallelReservoirLayer(BaseLayer):
     # 入力結合重み行列W_inの初期化
@@ -310,6 +258,58 @@ class ParallelReservoirLayer(BaseLayer):
         info = super().info()
         info.update(myInfo)
 
+        return info
+
+
+
+# 出力層
+class OutputLayer(BaseLayer):
+    # 出力結合重み行列の初期化
+    def  __init__(self, inDim, outDim, bias=False, ud=0, seed=0):
+        '''
+        param inDim: 入力次元
+        param outDim: 出力次元
+        param bias: バイアスの有無(入力値を直接出力層に持っていくか否か)
+        param ud: 入力値の次元
+        param seed: 内部結合初期化のシード値
+        '''
+        super().__init__(inDim, outDim)
+        
+        # バイアスの設定
+        self.bias = bias
+        if self.bias:
+            self.inputDimention += ud
+
+        # 正規分布に従う乱数
+        cp.random.seed(seed=seed)
+        self.internalConnection = cp.random.normal(size=(self.outputDimention, self.inputDimention))
+
+    # バイアスに対応
+    def __call__(self, inputVector, U):
+        '''
+        param inputVector: 入力状態ベクトル
+        param U: モデルへの入力値
+        return: 更新後の値(cupy)
+        '''
+        if self.bias:
+            inputVector = cp.append(inputVector, U)
+
+        return super().__call__(inputVector)
+
+    # 学習済みの出力結合重み行列を設定
+    def setOptWeight(self, incnOpt):
+        '''
+        param incnOpt: 学習済みの出力結合重み
+        '''
+        super().setIntCon(incnOpt)
+
+    # 各ハイパーパラメータの情報
+    def info(self):
+        '''
+        return: クラスメンバの名称と値
+        '''
+        info = {"inputDimention": self.inputDimention, "outputDimention":self.outputDimention, "bias":self.bias}
+        
         return info
 
 
