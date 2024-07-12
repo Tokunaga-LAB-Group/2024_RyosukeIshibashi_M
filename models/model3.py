@@ -199,23 +199,21 @@ class ReservoirLayer(BaseLayer):
         return info
 
 
-# パラレルリザバー
-class ParallelReservoirLayer(BaseLayer):
-    # 入力結合重み行列W_inの初期化
-    def __init__(self, inDim, outDim, layers:list[tuple[InputLayer, ReservoirLayer]], connected=False, seed=0):
+# マルチリザバー(パラレルとシリアルをまとめたクラス)
+class MultiReservoirLayer(BaseLayer):
+        # 入力結合重み行列W_inの初期化
+    def __init__(self, inDim, outDim, layers:list[tuple[InputLayer, ReservoirLayer]], mode, intensity):
         '''
         param inDim: 入力次元
-        param outDim: 出力次元 (リザバー層の出力次元の合計と合わせる)
+        param outDim: 出力次元
         param layers: (入力層, リザバー層) のリスト (入力層の入力次元はinDimと合わせる)
-        param connected: リザバー層間で接続があるか否か Trueで接続あり
-        param seed: 内部結合初期化のシード値
+        param mode: リザバー層の並べ方とか parallel, serial, both
+        param intensity: リザバー層間のデータ受け渡し倍率
         '''
         super().__init__(inDim, outDim)
         self.layers = layers
-        self.connected = connected
-        self.seed = seed
-        # 一様分布に従う乱数
-        cp.random.seed(seed=seed)
+        self.mode = mode
+        self.intensity = intensity
 
         # 内部結合設定
         self.internalConnection = cp.random.uniform(-1, 1, (outDim, inDim))
@@ -228,13 +226,31 @@ class ParallelReservoirLayer(BaseLayer):
         return: 更新後の値(cupy)
         '''
         self.internalState = cp.empty(0)
-        for (input, reservoir) in self.layers:
-            inputsVector = input(inputVector)
-            reservoirsVector = reservoir(inputsVector)
-            # エラー出るかも
-            self.internalState = cp.append(self.internalState, reservoirsVector)
 
-        # return cp.dot(self.internalConnection, self.internalState)
+        # エラー処理はいったん放置
+        if self.mode == "parallel":
+            for (input, reservoir) in self.layers:
+                inputsVector = input(inputVector)
+                reservoirsVector = reservoir(inputsVector)
+                self.internalState = cp.append(self.internalState, reservoirsVector)
+
+        elif self.mode == "serial":
+            (_, reservoir) = self.layers[0]
+            reservoirsVector = reservoir(inputVector)
+            for i in range(1, len(self.layers)):
+                (_, reservoir) = self.layers[i]
+                reservoirsVector = reservoir(reservoirsVector * self.intensity)
+            self.internalState = reservoirsVector
+        
+        elif self.mode == "both":
+            prevReservoirsVector = cp.zeros(1)
+            for (input, reservoir) in self.layers:
+                inputsVector = input(inputVector)
+                reservoirsVector = reservoir(cp.append(inputsVector, prevReservoirsVector * self.intensity))
+                self.internalState = cp.append(self.internalState, reservoirsVector)
+                prevReservoirsVector = reservoirsVector
+
+
         return self.internalState
 
 
@@ -252,13 +268,52 @@ class ParallelReservoirLayer(BaseLayer):
         layersInfo = {}
         for i in range(len(self.layers)):
             (input, reservoir) = self.layers[i]
-            layersInfo[f"layer[{i}]"] = {"inputsLayer":input.info(), "reservoirLayer":reservoir.info()}
-        myInfo = {"layers":layersInfo, "connected":self.connected, "seed":self.seed}
+            layersInfo[f"layer[{i}]"] = {"inputsLayer":input.info() if not input==None else None, "reservoirLayer":reservoir.info()}
+        myInfo = {"mode":self.mode, "layers":layersInfo, "intensity":self.intensity}
 
         info = super().info()
         info.update(myInfo)
 
         return info
+
+
+# パラレルリザバー
+class ParallelReservoirLayer(MultiReservoirLayer):
+    # 初期化
+    def __init__(self, inDim, outDim, layers:list[tuple[InputLayer, ReservoirLayer]]):
+        '''
+        param inDim: 入力次元
+        param outDim: 出力次元 (リザバー層の出力次元の合計と合わせる)
+        param layers: (入力層, リザバー層) のリスト (入力層の入力次元はinDimと合わせる)
+        '''
+        super().__init__(inDim, outDim, layers, "parallel", 0)
+
+# シリアルリザバー
+class SerialReservoirLayer(MultiReservoirLayer):
+    # 初期化
+    def __init__(self, inDim, outDim, layers:list[ReservoirLayer], intensity):
+        '''
+        param inDim: 入力次元
+        param outDim: 出力次元 (リストの最後のリザバー層の出力次元と合わせる)
+        param layers: リザバー層のリスト (あるリザバー層の出力次元とその直後のリザバー層の入力次元を合わせる)
+        param intensity: リザバー層間のデータ受け渡し倍率
+        '''
+        layersMulti = []
+        for res in layers:
+            layersMulti.append((None, res))
+        super().__init__(inDim, outDim, layersMulti, "serial", intensity)
+
+# 複合リザバー
+class BothReservoirLayer(MultiReservoirLayer):
+    # 初期化
+    def __init__(self, inDim, outDim, layers:list[tuple[InputLayer, ReservoirLayer]], intensity):
+        '''
+        param inDim: 入力次元
+        param outDim: 出力次元 (リザバー層の出力次元の合計と合わせる)
+        param layers: (入力層, リザバー層) のリスト (入力層の入力次元はinDimと合わせる)
+        param intensity: リザバー層間のデータ受け渡し倍率
+        '''
+        super().__init__(inDim, outDim, layers, "both", intensity)
 
 
 
