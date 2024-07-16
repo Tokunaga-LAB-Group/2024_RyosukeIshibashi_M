@@ -600,7 +600,7 @@ class ESN:
         trainLen = len(U)
         if transLen is None:
             transLen = 0 # デフォルトで0にすればいいのでは？
-        Y = cp.empty(0)
+        Y = cp.empty((0, self.outputLayer.outputDimention))
 
         # 時間発展
         for n in tqdm(range(trainLen)):
@@ -639,7 +639,7 @@ class ESN:
 
             # 学習前のモデル出力
             outputVector = self.outputLayer(reservoirVector, U[n])
-            Y = cp.append(Y, self.outputFunc(outputVector))
+            Y = cp.vstack((Y, self.outputFunc(outputVector)))
             self.prevOutputVector = grandTruth # フィードバックで使う
 
         # 学習済みの出力結合重み行列を設定
@@ -663,7 +663,7 @@ class ESN:
         self.params["optimizer"] = optimizer.info()
 
         WoutOpt = cp.empty(0)
-        Y = cp.empty(0)
+        Y = cp.empty((0, self.outputLayer.outputDimention))
         miniSize = 0
         
         for udi in tqdm(range(len(U))):
@@ -713,7 +713,7 @@ class ESN:
 
                 # 学習前のモデル出力
                 outputVector = self.outputLayer(reservoirVector, u[n])
-                Y = cp.append(Y, self.outputFunc(outputVector))
+                Y = cp.vstack((Y, self.outputFunc(outputVector)))
                 self.prevOutputVector = grandTruth # フィードバックで使う
 
             # # ミニバッチ単位で重み計算
@@ -741,7 +741,7 @@ class ESN:
         return: 学習後のモデル出力
         '''
         testLen = len(U)
-        predictY = cp.empty(0)
+        predictY = cp.empty((0, self.outputLayer.outputDimention))
 
         # 時間発展
         for n in range(testLen):
@@ -767,8 +767,8 @@ class ESN:
 
             # 学習後のモデル出力
             outputVector = self.outputLayer(reservoirVector, U[n])
-            predictY = cp.append(predictY, self.outputFunc(outputVector))
-            self.prevOutputVector = outputVector[0] # エラー出ると思う
+            predictY = cp.vstack((predictY, self.outputFunc(outputVector)))
+            self.prevOutputVector = outputVector # エラー出ると思う
 
         # モデル出力(学習後)
         return predictY
