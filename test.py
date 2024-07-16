@@ -14,7 +14,7 @@ import csv
 import cupy as cp
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from models.model3 import InputLayer, ReservoirLayer, OutputLayer, ESN, Tikhonov, ParallelReservoirLayer
+from models.model3 import InputLayer, ReservoirLayer, OutputLayer, ESN, Tikhonov, ParallelReservoirLayer, SerialReservoirLayer, BothReservoirLayer
 from orglib import make_dataset as md
 from orglib import stegano as stg
 from orglib import read_csv as rc
@@ -62,7 +62,7 @@ def nFramePredict2(T, trainLen, diff, amp, period, namp):
     return: (trainGT, trainInput, testGT, testInput)
     '''
 
-    x = cp.arange(T+diff) * (2 * cp.pi / (period/10))
+    x = cp.arange(T+diff) * (2 * cp.pi / ((period+23)/10))
     noiseData = namp * cp.sin(x)
     x = cp.arange(T+diff) * (2 * cp.pi / period)
     rawData = amp * cp.sin(x)
@@ -160,14 +160,18 @@ if __name__ == "__main__":
     # Reservoir
     # reservoirLayer = ReservoirLayer(16, 64, nodeNum, 0.2, 0.95, cp.tanh, 0.22)
 
-    resInput1 = InputLayer(16, 32, inputScale=1, seed=10)
+    resInput1 = InputLayer(16, 32, inputScale=1, seed=11)
     resRes1 = ReservoirLayer(32, 48, nodeNum, 0.2, 0.95, cp.tanh, 0.22, seed=101)
 
-    resInput2 = InputLayer(16, 16, inputScale=1, seed=11)
+    resInput2 = InputLayer(16, 16, inputScale=1, seed=12)
     resRes2 = ReservoirLayer(16, 16, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=102)
-    
-    reservoirLayer = ParallelReservoirLayer(16, 64, [(resInput1, resRes1), (resInput2, resRes2)])
 
+    resInput3 = InputLayer(16, 16, inputScale=1, seed=13)
+    resRes3 = ReservoirLayer(16, 64, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=103)
+
+    # reservoirLayer = ParallelReservoirLayer(16, 64, [(resInput1, resRes1), (resInput2, resRes2)])
+    # reservoirLayer = SerialReservoirLayer(16, 64, [resRes2, resRes3], 1)
+    reservoirLayer = BothReservoirLayer(16, 64, [(resInput1, resRes1), (resInput2, resRes2)], 1)
 
     # Output
     outputLayer = OutputLayer(64, 1)
@@ -214,12 +218,12 @@ if __name__ == "__main__":
     ax2.legend()
 
     # 生成するファイル名
-    fname = "output/20240711/test09.png"
+    fname = "output/20240711/test15.png"
     # 保存
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
 
     # info表示できるか
-    # print(model.info())
+    print(model.info())
 
 
