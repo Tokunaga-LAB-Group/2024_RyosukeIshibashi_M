@@ -254,8 +254,12 @@ def makeFig2(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450
     ax2 = fig.add_subplot(1, 1, 1)
     ax2.set_title("Output", fontsize=20)
     # plt.plot(pred, label="predict")
-    ax2.plot(tY[-viewLen:], label="model")
-    ax2.plot(tData[-viewLen:], color="k", label="correct", alpha=0.7, linewidth=0.7, linestyle=":")
+    ax2.plot(tData[-viewLen:], color="k", label="mean", alpha=0.7, linewidth=0.7, linestyle=":")
+    ax2.fill_between(np.linspace(0, len(tData)-1, len(tData)), 
+        (tData[-viewLen:] + tDataStd[-viewLen:]).reshape(-1), 
+        (tData[-viewLen:] - tDataStd[-viewLen:]).reshape(-1), 
+        alpha=0.15, color='k', label="std")
+    ax2.plot(tY[-viewLen:], label="predict")
     ax2.set_xlim(300, 700)
     ax2.set_ylim(-0.2, 0.8)
     ax2.grid(linestyle=":")
