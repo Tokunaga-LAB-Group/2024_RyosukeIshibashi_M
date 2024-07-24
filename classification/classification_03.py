@@ -16,7 +16,7 @@ import csv
 import cupy as cp
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from models.model3 import ESN, Tikhonov, InputLayer, ReservoirLayer, OutputLayer
+from models.model3 import ESN, Tikhonov, InputLayer, ReservoirLayer, OutputLayer, ParallelReservoirLayer, SerialReservoirLayer, BothReservoirLayer
 from orglib import make_dataset as md
 from orglib import stegano as stg
 from orglib import read_csv as rc
@@ -113,20 +113,20 @@ def makeDataset(rawData, rawLabel, dataLen, transLen=100, suffle=None):
         value = [x * label + BIAS for x in TRAIN_VALUE]
         inputLabel = md.makeDiacetylData(value, TRAIN_DURATION)
 
-        for frame in range(0, len(data)-transLen, dataLen):
+        for frame in range(100, len(data)-transLen, dataLen):
             processData.append(data[frame:frame+transLen+dataLen])
             processLabel.append(inputLabel[frame:frame+transLen+dataLen])
+
+    processData = cp.array(processData)
+    processLabel = cp.array(processLabel)
 
     # 対応関係を保ったままシャッフル
     if suffle != None:
         cp.random.seed(suffle)
-        index = cp.random.permutation(len(processData))
-        processData = processData[index]
-        processLabel = processLabel[index]
+        cp.random.shuffle(processData)
+        cp.random.seed(suffle)
+        cp.random.shuffle(processLabel)
     
-    processData = cp.array(processData)
-    processLabel = cp.array(processLabel)
-
     return processData, processLabel
 
 
@@ -181,7 +181,7 @@ def makeFig(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450,
 
     ax3 = fig.add_subplot(1, 4, 3, sharey=ax2) # y軸共有
     ax3.set_title("Ground Truth", fontsize=20)
-    ax3.fill_between(np.linspace(0, len(tData)-1, len(tData)), 
+    ax3.fill_between(cp.linspace(0, len(tData)-1, len(tData)), 
         (tData[-viewLen:] + tDataStd[-viewLen:]).reshape(-1), 
         (tData[-viewLen:] - tDataStd[-viewLen:]).reshape(-1), 
         alpha=0.15, color='k', label="std")
@@ -293,7 +293,7 @@ def makeFig2(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450
     ax2.set_title("Output", fontsize=20)
     # plt.plot(pred, label="predict")
     ax2.plot(tY[-viewLen:], label="model")
-    ax2.plot(tData[-viewLen:], color="k", label="correct", alpha=0.7, linewidth=0.7, linestyle=":")
+    ax2.plot(tData[-viewLen:], color="k", label="Ground Truth", alpha=0.7, linewidth=0.7, linestyle=":")
     # ax2.set_xlim(300, 700)
     # ax2.set_ylim(-0.2, 0.8)
     ax2.grid(linestyle=":")
@@ -379,14 +379,15 @@ def main():
     # 訓練データ
     trainInput = []
     trainGT = []
-    csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300, args.csv_seed)
+    csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll2(csvFname, 300, args.csv_seed)
 
     # データセット作成
-    classData, classLabel = makeDataset(csvData, inputData, 100)
-    trainInput = classData[:800]
-    trainGT = classLabel[:800]
-    testInput = classData[809:]
-    testGT = classLabel[809:]
+    testLen = 1
+    classData, classLabel = makeDataset(csvData, inputData, dataLen=400, transLen=200, suffle=711)
+    trainInput = classData[:-testLen]
+    trainGT = classLabel[:-testLen]
+    testInput = classData[-testLen:]
+    testGT = classLabel[-testLen:]
 
 
     # cupyに変換とか
@@ -404,9 +405,26 @@ def main():
 
     # Input
     inputLayer = InputLayer(1, 128, inputScale=args.input_scale)
-
+    
     # Reservoir
-    reservoirLayer = ReservoirLayer(128, 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed)
+    # reservoirLayer = ReservoirLayer(128, 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed)
+
+    resInput1 = InputLayer(128, 256, inputScale=1, seed=11)
+    resRes1 = ReservoirLayer(256, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+1)
+
+    resInput2 = InputLayer(128, 256, inputScale=1, seed=12)
+    resRes2 = ReservoirLayer(256, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+2)
+
+    resInput3 = InputLayer(128, 256, inputScale=1, seed=13)
+    resRes3 = ReservoirLayer(256, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+3)
+
+    resInput4 = InputLayer(128, 256, inputScale=1, seed=14)
+    resRes4 = ReservoirLayer(256, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+4)
+
+    # reservoirLayer = ParallelReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)])
+    # reservoirLayer = SerialReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], 1)
+    reservoirLayer = BothReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)], 1)
+
 
     # Output
     outputLayer = OutputLayer(256, 1)
@@ -414,7 +432,7 @@ def main():
 
     #### ESN
     
-    model = ESN(inputLayer, reservoirLayer, outputLayer)
+    model = ESN(inputLayer, reservoirLayer, outputLayer, classification=True, averageWindow=50)
 
     optimizer = Tikhonov(outputLayer.inputDimention, outputLayer.outputDimention, args.tikhonov_beta)
 
@@ -422,7 +440,7 @@ def main():
     # 学習
 
     # train
-    trainOutput = model.trainMini(trainInput, trainGT, optimizer, transLen=100)
+    trainOutput = model.trainMini(trainInput, trainGT, optimizer, transLen=200)
 
     # print(outputLayer.internalConnection.shape)
 
@@ -455,16 +473,17 @@ def main():
 
 
     # # csvファイルに記録
-    # with open(args.figure_save_path + 'classification_lr_be_cs_rs_02.csv', 'a') as f:
+    # with open(args.figure_save_path + 'classification_fb_lr_be_cs_rs_02.csv', 'a') as f:
     #     writer = csv.writer(f)
     #     stim = args.test_name[0]
+    #     feedback = args.feedback_scale
     #     leak = args.leaking_rate
     #     # nodeNum = args.N_x
     #     # reservoir_num = args.reservoir_num
     #     beta = args.tikhonov_beta
     #     cs = args.csv_seed
     #     rs = args.reservoir_seed
-    #     writer.writerow([stim, leak, beta, cs, rs, RMSE, NRMSE])
+    #     writer.writerow([stim, feedback, leak, beta, cs, rs, RMSE, NRMSE])
 
 
 
