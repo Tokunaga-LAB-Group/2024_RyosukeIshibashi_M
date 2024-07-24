@@ -257,7 +257,7 @@ def makeFig2(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450
     ax2.plot(tY[-viewLen:], label="model")
     ax2.plot(tData[-viewLen:], color="k", label="correct", alpha=0.7, linewidth=0.7, linestyle=":")
     # ax2.set_xlim(300, 700)
-    # ax2.set_ylim(-0.2, 0.8)
+    ax2.set_ylim(-0.2, 0.8)
     ax2.grid(linestyle=":")
     ax2.set_xlabel("frame")
     ax2.legend()
@@ -386,7 +386,7 @@ def main():
     inputLayer = InputLayer(1, 128, inputScale=args.input_scale)
 
     # Reservoir
-    reservoirLayer = ReservoirLayer(128, 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate)
+    reservoirLayer = ReservoirLayer(128, 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed)
 
     # Output
     outputLayer = OutputLayer(256, 1)
@@ -419,8 +419,8 @@ def main():
 
     # 評価
     # 最初の方を除く
-    RMSE = cp.sqrt(((testInput[200:] - testOutput[200:]) ** 2).mean())
-    NRMSE = RMSE/cp.sqrt(cp.var(testInput[200:]))
+    RMSE = cp.sqrt(((testGT[300:] - testOutput[300:]) ** 2).mean())
+    NRMSE = RMSE/cp.sqrt(cp.var(testGT[300:]))
     print('RMSE =', RMSE)
     print('NRMSE =', NRMSE)
 
@@ -431,19 +431,20 @@ def main():
     # model.Reservoir.reset_reservoir_state()
     # testY = model.run(testLabel)
 
-    # makeFig2(saveFig, model, cp.asnumpy(testInput), cp.asnumpy(testGT), cp.asnumpy(testGTStd), cp.asnumpy(testOutput), 0, 0)
+    makeFig2(saveFig, model, cp.asnumpy(testInput), cp.asnumpy(testGT), cp.asnumpy(testGTStd), cp.asnumpy(testOutput), RMSE, NRMSE)
 
 
-    # csvファイルに記録
-    with open(args.figure_save_path + 'reproduction_nx_lr_cs_rs_02.csv', 'a') as f:
-        writer = csv.writer(f)
-        stim = args.test_name[0]
-        leak1 = args.leaking_rate
-        nodeNum = args.N_x
-        # reservoir_num = args.reservoir_num
-        cs = args.csv_seed
-        rs = args.reservoir_seed
-        writer.writerow([stim, nodeNum, leak1, cs, rs, RMSE, NRMSE])
+    # # csvファイルに記録
+    # with open(args.figure_save_path + 'reproduction_lr_be_cs_rs_02.csv', 'a') as f:
+    #     writer = csv.writer(f)
+    #     stim = args.test_name[0]
+    #     leak = args.leaking_rate
+    #     # nodeNum = args.N_x
+    #     # reservoir_num = args.reservoir_num
+    #     beta = args.tikhonov_beta
+    #     cs = args.csv_seed
+    #     rs = args.reservoir_seed
+    #     writer.writerow([stim, leak, beta, cs, rs, RMSE, NRMSE])
 
 
 
@@ -455,7 +456,7 @@ def main():
 # メイン関数
 if __name__ == "__main__":
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
     args = getArg()
     main()
