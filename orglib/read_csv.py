@@ -93,3 +93,40 @@ def readCsvAll(fnames, tgt, seed=917):
 
     # 返り値
     return csvDatas, inputDatas, csvDatasMean, csvDatasStd
+
+
+# 一度にデータ読み込んでついでに値も渡す
+def readCsvAll2(fnames, tgt, seed=917):
+    """
+    param filename: ディレクトリを含むファイル名のリスト
+    param tgt: Fを参照する時刻
+    param seed: データシャッフル時のシード値 Noneを与えるとシャッフルしない
+    return: 前処理したデータ，入力値，それぞれの入力値ごとの平均，標準偏差
+    """
+    csvDatas = np.empty([0, 700])
+    csvDatasMean = {}
+    csvDatasStd = {}
+    inputDatasLabel = {"10-5":1, "10-6":1, "10-7":1, "10-8":1, "10-9":1, "0":0} # エレガントじゃない
+    inputDatas = np.empty(0)
+    for fname in fnames:
+        data = readCsvWithCorrection(fname, tgt)
+        csvDatas = np.append(csvDatas, data, axis=0)
+        csvDatasMean[fname.split("_")[1]] = np.mean(data, axis=0)
+        csvDatasStd[fname.split("_")[1]] = np.std(data, axis=0) / np.sqrt(len(data))
+        inputDatas = np.append(inputDatas, [inputDatasLabel[fname.split("_")[1]]] * len(data))
+    # print(csvDatas.shape)
+    # print(inputDatas.shape, inputDatas)
+    # print(inputDatasLabel)
+    # print(csvDatasMean)
+
+    # 対応関係を保ったままシャッフル
+    if seed != None:
+        np.random.seed(seed)
+        index = np.random.permutation(len(inputDatas))
+    else:
+        index = np.arange(len(inputDatas))
+    csvDatas = csvDatas[index]
+    inputDatas = inputDatas[index]
+
+    # 返り値
+    return csvDatas, inputDatas, csvDatasMean, csvDatasStd

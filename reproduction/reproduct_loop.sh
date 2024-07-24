@@ -15,49 +15,59 @@ TEST_VALUE="0 1 0"
 TEST_DURATION="300 200 200"
 
 # test時に予測するジアセチルの濃度(複数可)
-TEST_LIST="10-5 10-6 10-7 10-8 10-9 0"
+TEST_LIST="10-6"
 
 # 画像保存場所
-FIG_SAVE_PATH="../output/20240126/"
-FIG_SAVE_NAME_BASE="test_N2_300_result"
+FIG_SAVE_PATH="../output/20240621/"
+FIG_SAVE_NAME_BASE="hogehoge.png"
+
 
 
 for TEST in ${TEST_LIST}
 do 
 
-    for CSV_SEED in `seq 0 100 500`
-    do 
+for CSV_SEED in 116 126 136 146 156
+do
 
-        for RES_SEED in `seq 0 10 50`
-        do 
+for RES_SEED in 721 722 723 724 725
+do
 
-            # ファイル名生成
-            FIG_SAVE_NAME="${FIG_SAVE_NAME_BASE}_${TEST}_cs${CSV_SEED}_rs${RES_SEED}.png"
+for LEAK_RATE in 0.01 0.03 0.05 0.07 0.09  #0.1 0.3 0.5 0.7 0.9
+do 
 
-            python3 ./reproduction_multi_01.py \
-                --csv_filepath ${FILEPATH} \
-                --csv_filename ${FILENAME} \
-                --data_length 700 \
-                --train_value ${TRAIN_VALUE} \
-                --train_duration ${TRAIN_DURATION} \
-                --test_value ${TEST_VALUE} \
-                --test_duration ${TEST_DURATION} \
-                --test_name ${TEST} \
-                --reservoir_num 3 \
-                --N_x 400 400 400\
-                --lamb 0.24 0.24 0.24 \
-                --rho 0.9 0.9 0.9 \
-                --leaking_rate 0.1 0.5 0.9 \
-                --figure_save_path ${FIG_SAVE_PATH} \
-                --figure_save_name ${FIG_SAVE_NAME} \
-                --csv_seed ${CSV_SEED} \
-                --reservoir_seed ${RES_SEED} \
+for BETA in 0.001 0.0001 0.00001 0.000001 0.0000001
+do 
 
+    # ファイル名生成
+    # FIG_SAVE_NAME="${FIG_SAVE_NAME_BASE}_${TEST}_lr${LEAK_RATE1}_lr${LEAK_RATE2}_cs${CSV_SEED}_rs${RES_SEED}.png"
+    FIG_SAVE_NAME="${FIG_SAVE_NAME_BASE}"
+    python3 ./reproduction12.py \
+        --csv_filepath ${FILEPATH} \
+        --csv_filename ${FILENAME} \
+        --data_length 700 \
+        --train_value ${TRAIN_VALUE} \
+        --train_duration ${TRAIN_DURATION} \
+        --test_value ${TEST_VALUE} \
+        --test_duration ${TEST_DURATION} \
+        --test_name ${TEST} \
+        --reservoir_num 1 \
+        --N_x 600 \
+        --lamb 0.24 \
+        --rho 0.9 \
+        --leaking_rate ${LEAK_RATE} \
+        --tikhonov_beta ${BETA} \
+        --figure_save_path ${FIG_SAVE_PATH} \
+        --figure_save_name ${FIG_SAVE_NAME} \
+        --csv_seed ${CSV_SEED} \
+        --reservoir_seed ${RES_SEED} \
 
+done
 
-        done
+done
 
-    done
+done
+
+done
 
 done
 
