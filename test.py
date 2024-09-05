@@ -18,6 +18,7 @@ from models.model3 import InputLayer, ReservoirLayer, OutputLayer, ESN, Tikhonov
 from orglib import make_dataset as md
 from orglib import stegano as stg
 from orglib import read_csv as rc
+from orglib import read_json as rj
 
 
 # nフレーム先予測
@@ -120,31 +121,33 @@ if __name__ == "__main__":
 
 
     # # ファイルパスとファイル名(複数可)
-    # FILEPATH="input/"
-    # FILENAME="data_10-6_N2_300.csv"
+    # FILEPATH="./input/"
+    # FILENAME="data_all.json"
 
-    # csvFname = []
-    # csvFname.append(FILEPATH + FILENAME)
-    # csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll(csvFname, 300, 0)
+    # jsonFname = FILEPATH + FILENAME
+    # stim = -6
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAll(jsonFname, "p1", stim, seed=801)
 
-    # csvData = cp.array(csvData)
-    # print(csvData.shape)
+    # jsonData = cp.array(responseDataAll)
+    # print(jsonData.shape)
 
 
     # fig = plt.figure(figsize=[6, 3])
 
     # ax1 = fig.add_subplot(1,1,1)
     # ax1.set_title("Data", fontsize=15)
-    # ax1.plot(cp.asnumpy(csvData[0:5].T), linewidth=0.3)
+    # ax1.plot(cp.asnumpy(jsonData[0:5].T), linewidth=0.3)
     # ax1.grid(linestyle=":")
     # ax1.set_xlabel("frame")
 
     # # ax1.legend()
 
     # # 生成するファイル名
-    # fname = "output/20240603/dataset106.png"
+    # fname = "output/20240905/dataset_all.png"
     # # 保存
     # plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
+
+
 
     #### make data
     # trainGT, trainInput, testGT, testInput = nFramePredict(1000, 700, 30, 1, 100, 0.1)
@@ -223,7 +226,7 @@ if __name__ == "__main__":
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 
 
-    # info表示できるか
-    print(model.info())
+    # # info表示できるか
+    # print(model.info())
 
 
