@@ -15,16 +15,17 @@ TEST_VALUE="0 1 0"
 TEST_DURATION="300 200 200"
 # test時に予測するジアセチルの濃度(複数可)
 TEST="10-6"
+STIMULATE=-6
 
 # 画像保存場所
-FIG_SAVE_PATH="../output/20240801/"
-FIG_SAVE_NAME="result_106_01.png"
+FIG_SAVE_PATH="../output/20240905/"
+FIG_SAVE_NAME="result_106_14.png"
 
 
 python3 ./reproduction21.py \
     --json_filepath ${FILEPATH} \
     --json_filename ${FILENAME} \
-    --stimulate -6 \
+    --stimulate ${STIMULATE} \
     --data_length 700 \
     --train_value ${TRAIN_VALUE} \
     --train_duration ${TRAIN_DURATION} \
@@ -33,11 +34,12 @@ python3 ./reproduction21.py \
     --bias 0.1 \
     --test_name ${TEST} \
     --reservoir_num 1 \
+    --reservoir_seed 12235 \
     --N_x 300 \
     --lamb 0.24 \
     --rho 0.9 \
-    --leaking_rate 0.1 \
-    --tikhonov_beta 0.0001 \
+    --leaking_rate 0.001 \
+    --tikhonov_beta 0.01 \
     --figure_save_path ${FIG_SAVE_PATH} \
     --figure_save_name ${FIG_SAVE_NAME} \
 
