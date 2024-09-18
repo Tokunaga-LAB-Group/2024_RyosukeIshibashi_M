@@ -21,6 +21,7 @@ if __name__ == "__main__":
     pattern = "p2"
     stim = "-5"
     type = "N2"
+    target = "GCaMP"
 
     dictData = {}
 
@@ -43,6 +44,10 @@ if __name__ == "__main__":
         type = filename.split("_")[4]
         # print(type)
 
+        # target設定
+        target = filename.split("/")[-1].split("_")[0]
+        # print(target)
+
         #ファイルからデータを読み込み
         # rows = csv.reader(F, quoting=csv.QUOTE_NONNUMERIC)
         df = pd.read_csv(F, header=None, index_col=None)
@@ -63,7 +68,7 @@ if __name__ == "__main__":
             colData = df[col]
             # print(colData.values)
             # データ作成(辞書)
-            dData = {"pattern":pattern, "stim":stim, "type":type, "data":list(colData.values)}
+            dData = {"pattern":pattern, "stim":stim, "type":type, "target":target, "data":list(colData.values)}
             dictData[ID] = dData
 
             ID += 1
