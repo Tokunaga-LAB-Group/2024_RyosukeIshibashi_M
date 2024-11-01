@@ -34,7 +34,7 @@ def getArg():
                         help="JSON file path")
     parser.add_argument("--json_filename", type=str, required=True, 
                         help="JSON file name.")
-    parser.add_argument("--stimulate", type=int, required=True, 
+    parser.add_argument("--stimulate", type=str, required=True, 
                         help="Odor Stimulus Strength")
     parser.add_argument("--data_length", type=int, required=True,
                         help="Length of a data")
@@ -80,6 +80,8 @@ def getArg():
                         help="Noise level of input data")
     parser.add_argument("--tikhonov_beta", type=float, default=0.01,
                         help="Regularization parameter for Ridge regression")
+    parser.add_argument("--mode", type=str, required=True,
+                        help="Reservoir type : serial, parallel, both")
     
 
     # ループ処理のためのシード値
@@ -344,31 +346,34 @@ def makeFig2(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450
 
 
 # 出力画像生成
-def makeFig3(flag, title, output, GT, var, model, rmse, nrmse):
+def makeFig3(flag, title, output, GT, stde, model, rmse, nrmse):
     '''
     param flag: 画像を保存するかを管理するフラグ trueで保存
     param title: 画像タイトル
     param output: 出力データ
     param GT: 目標データ
-    param var: 目標データの分散
+    param stde: 目標データの標準誤差
     param model: 作ったモデルのインスタンス
     param rmse: RMSE
     param nrmse: NRMSE
     '''
 
     # サイズ調整
-    fig = plt.figure(figsize=[10, 4])
+    fig = plt.figure(figsize=[5, 3])
 
     ax1 = fig.add_subplot(1, 1, 1)
-    ax1.set_title(title, fontsize=20)
-    ax1.plot(cp.asnumpy(output), linewidth=0.7, label="data")
+    ax1.set_title(title, fontsize=12)
+    ax1.plot(cp.asnumpy(output), color="r", linewidth=2.0, label="model output")
     ax1.grid(linestyle=":")
     ax1.set_xlabel("frame")
 
     ax1.fill_between(cp.asnumpy(cp.linspace(0, len(output)-1, len(output))), 
-        cp.asnumpy(GT) + var, cp.asnumpy(GT) - var, 
-        alpha=0.15, color='k', label="var")
-    ax1.plot(cp.asnumpy(GT), color="k", label="mean", linewidth=0.5)
+        cp.asnumpy(GT) + stde, cp.asnumpy(GT) - stde, 
+        alpha=0.15, color='k', label="data std error")
+    ax1.plot(cp.asnumpy(GT), color="k", label="data mean", linewidth=0.5)
+
+    ax1.set_xlim(-10, 600)
+    ax1.set_ylim(0.5, 2.0)
 
     ax1.legend()
 
@@ -437,6 +442,7 @@ def main():
     else:
         saveFig = True
 
+    resMode = args.mode
 
     # 訓練データ
     trainInput = []
@@ -444,13 +450,23 @@ def main():
     # csvData, inputData, csvDatasMean, csvDatasStd = rc.readCsvAll2(csvFname, 300, args.csv_seed)
     # stim, data, mean, var = readJsonRaw("../input/data_all.json", "p1", -6)
     # stim, data, mean, var = readJsonProcess("../input/data_all.json", "p1", -6)
-    inputData, responseData, responseMean, responseVar = rj.readJsonRaw(jsonFname, "p1", stim)
+    # inputData, responseData, responseMean, responseVar = rj.readJsonRaw(jsonFname, "p1", stim)
+    # inputData, responseData, responseMean, responseStdError = rj.readJsonProcess(jsonFname, "p1", stim)
+    # inputData, responseData, responseMean, responseStdError = rj.readJsonRawUnveiled(jsonFname, "p3", stim, type="N2", target="paQuasAr3")
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAll(jsonFname, "p1", stim, seed=801)
+    inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
 
     # データセット作成
-    trainInput = cp.tile(inputData, (len(responseData), 1))
-    trainGT = cp.array(responseData)
-    testInput = cp.array(inputData)
-    testGT = cp.array(responseMean)
+    ### readJsonProcess用
+    # trainInput = cp.array([inputData + BIAS] * len(responseData))
+    # trainGT = cp.array(responseData * 100 - 99)
+    # testInput = cp.array(inputData + BIAS)
+    # testGT = cp.array(responseMean * 100 - 99)
+    ### readJsonAll用
+    trainInput = cp.array([inputData + BIAS for inputData in inputDataAll])
+    trainGT = cp.array(responseDataAll * 100 - 99)
+    testInput = cp.array(inputDataTest + BIAS)
+    testGT = cp.array(responseMean * 100 - 99)
 
     # print(trainInput.shape, trainGT.shape, testInput.shape, testGT.shape)
 
@@ -474,21 +490,24 @@ def main():
     # Reservoir
     # reservoirLayer = ReservoirLayer(128, 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed)
 
-    resInput1 = InputLayer(128, 256, inputScale=1, seed=11)
-    resRes1 = ReservoirLayer(256, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+1)
+    resInput1 = InputLayer(128, 64, inputScale=1, seed=11)
+    resRes1 = ReservoirLayer(64 if resMode!="serial" else 128, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+1)
 
-    resInput2 = InputLayer(128, 256, inputScale=1, seed=12)
-    resRes2 = ReservoirLayer(256, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+2)
+    resInput2 = InputLayer(128, 64, inputScale=1, seed=12)
+    resRes2 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+2)
 
-    resInput3 = InputLayer(128, 256, inputScale=1, seed=13)
-    resRes3 = ReservoirLayer(256, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+3)
+    resInput3 = InputLayer(128, 64, inputScale=1 if resMode!="both" else 1/2, seed=13)
+    resRes3 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+3)
 
-    resInput4 = InputLayer(128, 256, inputScale=1, seed=14)
-    resRes4 = ReservoirLayer(256, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+4)
+    resInput4 = InputLayer(128, 64, inputScale=1 if resMode!="both" else 1/4, seed=14)
+    resRes4 = ReservoirLayer(64, 64 if resMode!="serial" else 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+4)
 
-    # reservoirLayer = ParallelReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)])
-    # reservoirLayer = SerialReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], 1)
-    reservoirLayer = BothReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)], 1)
+    if resMode == "serial":
+        reservoirLayer = SerialReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], 1)
+    elif resMode == "parallel":
+        reservoirLayer = ParallelReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)])
+    elif resMode == "both":
+        reservoirLayer = BothReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)], 1)
 
 
     # Output
@@ -497,7 +516,7 @@ def main():
 
     #### ESN
     
-    model = ESN(inputLayer, reservoirLayer, outputLayer, classification=True, averageWindow=50)
+    model = ESN(inputLayer, reservoirLayer, outputLayer)
 
     optimizer = Tikhonov(outputLayer.inputDimention, outputLayer.outputDimention, args.tikhonov_beta)
 
@@ -506,6 +525,7 @@ def main():
 
     # train
     trainOutput = model.trainMini(trainInput, trainGT, optimizer, transLen=transLen)
+    # trainOutput = model.train(trainInput.reshape(-1), trainGT.reshape(-1), optimizer, transLen=transLen)
 
     # print(outputLayer.internalConnection.shape)
 
@@ -521,9 +541,10 @@ def main():
 
 
     # 評価
+    testOutput = testOutput.reshape(-1) # flatten
     # 最初の方を除く
-    RMSE = cp.sqrt(((testGT[300:] - testOutput[300:]) ** 2).mean())
-    NRMSE = RMSE/cp.sqrt(cp.var(testGT[300:]))
+    RMSE = cp.sqrt(((testGT[200:] - testOutput[200:]) ** 2).mean())
+    NRMSE = RMSE / cp.sqrt(cp.var(testGT[200:]))
     print('RMSE =', RMSE)
     print('NRMSE =', NRMSE)
 
@@ -535,13 +556,13 @@ def main():
     # testY = model.run(testLabel)
 
     # makeFig2(saveFig, model, cp.asnumpy(testInput), cp.asnumpy(testGT), cp.asnumpy(testGT), cp.asnumpy(testOutput), RMSE, NRMSE)
-    makeFig3(saveFig, "hogehoge", testOutput, testGT, responseVar, model, RMSE, NRMSE)
+    makeFig3(saveFig, f"proposal, train_All, test_{stim}, lr_{args.leaking_rate}, beta_{args.tikhonov_beta}", testOutput, testGT, responseStdError*100, model, RMSE, NRMSE)
 
 
     # # csvファイルに記録
-    # with open(args.figure_save_path + 'classification_fb_lr_be_cs_rs_02.csv', 'a') as f:
+    # with open(args.figure_save_path + 'reproduction_mode_stim_rs.csv', 'a') as f:
     #     writer = csv.writer(f)
-    #     stim = args.test_name[0]
+    #     stim = args.stimulate
     #     feedback = args.feedback_scale
     #     leak = args.leaking_rate
     #     # nodeNum = args.N_x
@@ -549,7 +570,8 @@ def main():
     #     beta = args.tikhonov_beta
     #     cs = args.csv_seed
     #     rs = args.reservoir_seed
-    #     writer.writerow([stim, feedback, leak, beta, cs, rs, RMSE, NRMSE])
+    #     mode = args.mode
+    #     writer.writerow([mode, stim, rs, RMSE, NRMSE])
 
 
 
@@ -561,7 +583,7 @@ def main():
 # メイン関数
 if __name__ == "__main__":
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
     args = getArg()
     main()
