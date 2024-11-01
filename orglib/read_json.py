@@ -36,7 +36,7 @@ def readJsonRaw(filename, pattern, stim):
     # 匂い刺激入力データ
     df = pd.read_json("../input/input_pattern.json")
     stimList = {-5:5, -6:4, -7:3, -8:2, -9:1, 0:0}
-    stimData = df["p0"].to_numpy() * stimList[stim]
+    stimData = df[pattern].to_numpy() * stimList[stim]
     
     return stimData, responseData, responseMean, responseStdError
 
@@ -74,8 +74,8 @@ def readJsonRawUnveiled(filename, pattern, stim, type, target):
 
 
     # 匂い刺激入力データ
-    pattern = "p2"
-    df = pd.read_json("../input/input_pattern.json")
+    # pattern = "p2"
+    df = pd.read_json("/home/ishibashi/Reservoir_ESN/input/input_pattern.json")
     # print(np.array(df[pattern]["data"]))
     stimList = {"-5":5, "-6":4, "-7":3, "-8":2, "-9":1, "-0":0}
     stimData = np.array(df[pattern]["data"]) * stimList[stim]
@@ -160,6 +160,55 @@ def readJsonAll(filename, pattern, stim, tgt=300, seed=0):
     return np.array(stimDataAll), np.array(responseDataAll), np.array(stimDataTest), np.array(responseMean), np.array(responseStdError)
 
 
+# trainを全データにしたやつ
+def readJsonAllUnveiled(filename, pattern, stim, type, target):
+    """
+    param filename: 読み込みたいjsonファイル
+    param pattern: 読み込みたい匂い刺激パターン(今は 'p2' だけ)
+    param stim: 読み込みたい匂い濃度 (-5, -6, -7, -8, -9, -0 (dtype=string))
+    param type: 読み込みたい線虫のタイプ(N2, odr-3)
+    param target: 読み込みたいデータの対象(GCaMP, paQuasAr3)
+    return: stimDataAll, responseDataAll, stimDataTest, responseMean, responseStdError
+    """
+
+    # testデータを取ってくる
+    stimDataTest, _, responseMean, responseStdError = readJsonRawUnveiled(filename, pattern, stim, type, target)
+
+    # 全濃度のデータを取得
+    stimDataAll = []
+    responseDataAll = []
+    for s in ["-5", "-6", "-7", "-8", "-9", "-0"]:
+        sData, sResponse, _, _ = readJsonRawUnveiled(filename, pattern, s, type, target)
+        stimDataAll.extend([sData] * len(sResponse))
+        responseDataAll.extend(sResponse)
+
+    return np.array(stimDataAll), np.array(responseDataAll), np.array(stimDataTest), np.array(responseMean), np.array(responseStdError)
+
+# 学習データからtargetを抜く
+def readJsonAllUnveiled2(filename, pattern, stim, type, target):
+    """
+    param filename: 読み込みたいjsonファイル
+    param pattern: 読み込みたい匂い刺激パターン(今は 'p2' だけ)
+    param stim: 読み込みたい匂い濃度 (-5, -6, -7, -8, -9, -0 (dtype=string))
+    param type: 読み込みたい線虫のタイプ(N2, odr-3)
+    param target: 読み込みたいデータの対象(GCaMP, paQuasAr3)
+    return: stimDataAll, responseDataAll, stimDataTest, responseMean, responseStdError
+    """
+
+    # testデータを取ってくる
+    stimDataTest, _, responseMean, responseStdError = readJsonRawUnveiled(filename, pattern, stim, type, target)
+
+    # 全濃度のデータを取得
+    stimDataAll = []
+    responseDataAll = []
+    for s in ["-5", "-6", "-7", "-8", "-9", "-0"]:
+        if s == stim: 
+            continue
+        sData, sResponse, _, _ = readJsonRawUnveiled(filename, pattern, s, type, target)
+        stimDataAll.extend([sData] * len(sResponse))
+        responseDataAll.extend(sResponse)
+
+    return np.array(stimDataAll), np.array(responseDataAll), np.array(stimDataTest), np.array(responseMean), np.array(responseStdError)
 
 
 
@@ -169,7 +218,8 @@ if __name__ == "__main__":
     print("hoge")
 
     # stim, data, mean, var = readJsonRaw("../input/data_all.json", "p1", -6)
-    stim, data, mean, stde = readJsonRawUnveiled("../input/data_unveiled.json", "p2", "-6", "N2", "paQuasAr3")
+    stim, data, mean, stde = readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig5_ab.json", "p2", "-6", "N2", "paQuasAr3")
+    # stimAll, dataAll, stimTest, mean, stde = readJsonAllUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig5_ab.json", "p2", "-6", "N2", "paQuasAr3")
     # stim, data, mean, var = readJsonProcess("../input/data_all.json", "p1", -6)
     # stimAll, dataAll, stimTest, mean, stde = readJsonAll("../input/data_all.json", "p1", -6)
     # stimAll, dataAll, stimTest, mean, stde = readJsonPert("../input/data_all.json", "p1", -6, isAll=False)
@@ -177,6 +227,7 @@ if __name__ == "__main__":
     # inputData, responseData, responseMean, responseStdError = rj.readJsonProcess(jsonFname, "p1", stim)
 
     print(stim.shape, data.shape)
+    # print(stimAll.shape, dataAll.shape)
     # print(stimTest.shape)
-    print(mean)
-    print(stde)
+    # print(mean)
+    # print(stde)
