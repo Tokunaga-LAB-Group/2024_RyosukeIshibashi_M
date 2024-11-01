@@ -551,7 +551,8 @@ def main():
     # inputData, responseData, responseMean, responseStdError = rj.readJsonProcess(jsonFname, "p1", stim)
     # inputData, responseData, responseMean, responseStdError = rj.readJsonRawUnveiled(jsonFname, "p3", stim, type="N2", target="paQuasAr3")
     # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAll(jsonFname, "p1", stim, seed=801)
-    inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled2(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
 
     # データセット作成
     ### readJsonProcess用
@@ -585,7 +586,7 @@ if __name__ == "__main__":
 
     study = optuna.create_study(sampler=optuna.samplers.GPSampler(n_startup_trials=10))
     # study.optimize(Objective(resMode, trainInput, trainGT, testInput, testGT, transLen), n_trials=10)
-    study.optimize(Objective(resMode, [testInput], [testGT], testInput, testGT, transLen), n_trials=100)
+    study.optimize(Objective(resMode, trainInput, trainGT, testInput, testGT, transLen), n_trials=100)
 
     best_params = study.best_params
     found_nodeNum = best_params["nodeNum"]
