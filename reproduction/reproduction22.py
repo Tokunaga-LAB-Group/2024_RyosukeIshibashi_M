@@ -551,8 +551,8 @@ def main():
     # inputData, responseData, responseMean, responseStdError = rj.readJsonProcess(jsonFname, "p1", stim)
     # inputData, responseData, responseMean, responseStdError = rj.readJsonRawUnveiled(jsonFname, "p3", stim, type="N2", target="paQuasAr3")
     # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAll(jsonFname, "p1", stim, seed=801)
-    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
-    inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled2(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled2(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
 
     # データセット作成
     ### readJsonProcess用
@@ -579,12 +579,22 @@ def main():
 # メイン関数
 if __name__ == "__main__":
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+
+    # tqdmの表示を抑制
+    from functools import partialmethod
+    tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
     args = getArg()
     resMode, trainInput, trainGT, testInput, testGT, transLen = main()
 
-    study = optuna.create_study(sampler=optuna.samplers.GPSampler(n_startup_trials=10))
+    # study = optuna.create_study(sampler=optuna.samplers.GPSampler(n_startup_trials=10))
+    study = optuna.create_study(
+        study_name="reproduct_sample07", 
+        storage="mysql://ishibashi@127.0.0.1/ishibashi_optuna_01",
+        # sampler=optuna.samplers.GPSampler(n_startup_trials=10),
+        load_if_exists=True,
+    )
     # study.optimize(Objective(resMode, trainInput, trainGT, testInput, testGT, transLen), n_trials=10)
     study.optimize(Objective(resMode, trainInput, trainGT, testInput, testGT, transLen), n_trials=100)
 
@@ -595,4 +605,4 @@ if __name__ == "__main__":
     
     best_value = study.best_value
 
-    print(f"Found nodeNum: {found_nodeNum}, Found leaking rate:{found_leaking_rate}, Found tikhonov beta : {found_tikhonov_beta}, value : {best_value}")
+    # print(f"Found nodeNum: {found_nodeNum}, Found leaking rate:{found_leaking_rate}, Found tikhonov beta : {found_tikhonov_beta}, value : {best_value}")

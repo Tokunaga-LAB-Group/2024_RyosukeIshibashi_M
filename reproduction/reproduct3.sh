@@ -25,8 +25,13 @@ FIG_SAVE_NAME="result_105_01.png"
 for STIM in -6 #-5 -6 -7 -8 -9 -0
 do
 
+for i in `seq 10`
+do
+
 FIG_NAME="result_both_${STIM}_01.png"
 
+nohup \
+taskset -c 0-9 \
 python3 ./reproduction22.py \
     --json_filepath ${FILEPATH} \
     --json_filename ${FILENAME} \
@@ -48,9 +53,15 @@ python3 ./reproduction22.py \
     --tikhonov_beta 0.00001 \
     --figure_save_path ${FIG_SAVE_PATH} \
     --figure_save_name ${FIG_NAME} \
+    > ${FIG_SAVE_PATH}/optuna03_${i}.out \
+    &
+
+# そのままだと次の処理の実行が早すぎる(かもしれない)ので少し待つ
+sleep 10
 
 done
 
+done
 
 # nohup python ./test.py \
 #     --GPU 1 \
