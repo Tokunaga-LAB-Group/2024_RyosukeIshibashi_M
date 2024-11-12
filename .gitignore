@@ -3,3 +3,5 @@ other/
 nohup.out
 profile.txt
 loop.log
+*.log
+*.out
