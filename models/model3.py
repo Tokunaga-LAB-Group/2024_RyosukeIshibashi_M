@@ -144,7 +144,7 @@ class ReservoirLayer(BaseLayer):
         '''
         # 距離を考慮したリザバー結合
         G = gm.makeGraph(nodeNum, lamb, self.seed)
-        print("density =" , nx.density(G))
+        # print("density =" , nx.density(G))
 
         # 行列への変換(結合構造のみ)
         connection = nx.to_numpy_array(G)
@@ -165,9 +165,10 @@ class ReservoirLayer(BaseLayer):
         return W
     
     # リザバー状態ベクトルの更新
-    def __call__(self, inputVector):
+    def __call__(self, inputVector, dropout=None):
         '''
         param inputVector: 入力状態ベクトル
+        param dropout: リザバー層のドロップアウト指定
         return: 更新後の値(cupy)
         '''
         # ノード数と同じshapeにリサイズ
@@ -213,41 +214,47 @@ class MultiReservoirLayer(BaseLayer):
         super().__init__(inDim, outDim)
         self.layers = layers
         self.mode = mode
-        self.intensity = intensity
+        # intensityがリストor数値で場合分け, self.intensityはリスト固定
+        self.intensity = [intensity]*len(layers) if type(intensity) != list else intensity
 
         # 内部結合設定
         self.internalConnection = cp.random.uniform(-1, 1, (outDim, inDim))
 
 
     # 入力結合重み行列による重みづけ
-    def __call__(self, inputVector):
+    def __call__(self, inputVector, dropout=None):
         '''
         param inputVector: 入力状態ベクトル
+        param dropout: リザバー層のドロップアウト指定
         return: 更新後の値(cupy)
         '''
         self.internalState = cp.empty(0)
+        if dropout == None:
+            dropout=[1]*len(self.layers)
 
         # エラー処理はいったん放置
         if self.mode == "parallel":
-            for (input, reservoir) in self.layers:
+            for i in range(0, len(self.layers)):
+                (input, reservoir) = self.layers[i]
                 inputsVector = input(inputVector)
                 reservoirsVector = reservoir(inputsVector)
-                self.internalState = cp.append(self.internalState, reservoirsVector)
+                self.internalState = cp.append(self.internalState, reservoirsVector * dropout[i])
 
         elif self.mode == "serial":
             (_, reservoir) = self.layers[0]
             reservoirsVector = reservoir(inputVector)
             for i in range(1, len(self.layers)):
                 (_, reservoir) = self.layers[i]
-                reservoirsVector = reservoir(reservoirsVector * self.intensity)
+                reservoirsVector = reservoir(reservoirsVector * self.intensity[i-1])
             self.internalState = reservoirsVector
         
         elif self.mode == "both":
             prevReservoirsVector = cp.zeros(1)
-            for (input, reservoir) in self.layers:
+            for i in range(0, len(self.layers)):
+                (input, reservoir) = self.layers[i]
                 inputsVector = input(inputVector)
-                reservoirsVector = reservoir(cp.append(inputsVector, prevReservoirsVector * self.intensity))
-                self.internalState = cp.append(self.internalState, reservoirsVector)
+                reservoirsVector = reservoir(cp.append(inputsVector, prevReservoirsVector * self.intensity[i]))
+                self.internalState = cp.append(self.internalState, reservoirsVector * dropout[i])
                 prevReservoirsVector = reservoirsVector
 
 
@@ -650,12 +657,13 @@ class ESN:
     
 
     # ミニバッチ学習
-    def trainMini(self, U, D, optimizer:Tikhonov, transLen = None):
+    def trainMini(self, U, D, optimizer:Tikhonov, transLen=None, dropout=None):
         '''
         param U: 入力データ，ミニバッチ数*inputDimention*データ長
         param D: 入力データに対する正解データ，ミニバッチ数*outputDimention*データ長
         param optimizer: 学習器
         param transLen: 過渡期の長さ
+        param dropout: リザバー層のドロップアウトを設定 初期値None listの0/1で指定
         return: 学習前のモデル出力， outputDimention*データ長
         '''
 
@@ -693,7 +701,7 @@ class ESN:
 
 
                 #### Reservoir layer
-                reservoirVector = self.reservoirLayer(inputVector)
+                reservoirVector = self.reservoirLayer(inputVector, dropout)
 
                 # 分類問題の場合は窓幅分の平均を取得(要修正)
                 if self.classification:
@@ -735,9 +743,10 @@ class ESN:
     
 
     # バッチ学習後の予測
-    def predict(self, U):
+    def predict(self, U, dropout=None):
         '''
         param U: 入力データ，データ長*inputDimention
+        param dropout: リザバー層のドロップアウトを設定 初期値None listの0/1で指定
         return: 学習後のモデル出力
         '''
         testLen = len(U)
@@ -755,7 +764,7 @@ class ESN:
                 inputVector += feedbackVector
 
             #### Reservoir layer
-            reservoirVector = self.reservoirLayer(inputVector)
+            reservoirVector = self.reservoirLayer(inputVector, dropout)
 
             # 分類問題の場合は窓幅分の平均を取得
             if self.classification:
