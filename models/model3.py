@@ -322,6 +322,20 @@ class BothReservoirLayer(MultiReservoirLayer):
         '''
         super().__init__(inDim, outDim, layers, "both", intensity)
 
+# 複合リザバーその2
+class MixedReservoirLayer(MultiReservoirLayer):
+    # 初期化
+    def __init__(self, inDim, outDim, layers:list[ReservoirLayer], intensity):
+        '''
+        param inDim: 入力次元
+        param outDim: 出力次元 (リストの最後のリザバー層の出力次元と合わせる)
+        param layers: リザバー層のリスト (あるリザバー層の出力次元とその直後のリザバー層の入力次元を合わせる)
+        param intensity: リザバー層間のデータ受け渡し倍率
+        '''
+        layersMulti = []
+        for res in layers:
+            layersMulti.append((None, res))
+        super().__init__(inDim, outDim, layersMulti, "mixed", intensity)
 
 
 # 出力層
