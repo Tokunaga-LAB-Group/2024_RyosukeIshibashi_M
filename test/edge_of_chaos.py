@@ -52,7 +52,7 @@ if __name__ == '__main__':
         #                       activation_func=cp.tanh, leaking_rate=1.0, seed=0)
 
         # Reservoir
-        reservoirLayer = ReservoirLayer(nodeNum, nodeNum, nodeNum, 0.2, rho, cp.tanh, 1.0)
+        reservoirLayer = ReservoirLayer(nodeNum, nodeNum, nodeNum, 0.24, rho, cp.tanh, 1.0)
 
         # resInput1 = InputLayer(16, 32, inputScale=1, seed=11)
         # resRes1 = ReservoirLayer(32, 48, nodeNum, 0.2, rho, cp.tanh, 0.22, seed=101)
@@ -110,6 +110,6 @@ if __name__ == '__main__':
     plt.grid(True)
 
     # 生成するファイル名
-    fname = "../output/20240716/edge_of_chaos_11.png"
+    fname = "../output/20240716/edge_of_chaos_12.png"
     # 保存
     plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
