@@ -16,7 +16,7 @@ import csv
 import cupy as cp
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from models.model3 import ESN, Tikhonov, InputLayer, ReservoirLayer, OutputLayer, ParallelReservoirLayer, SerialReservoirLayer, BothReservoirLayer
+from models.model3 import ESN, Tikhonov, InputLayer, ReservoirLayer, OutputLayer, ParallelReservoirLayer, SerialReservoirLayer, BothReservoirLayer, MixedReservoirLayer
 from orglib import make_dataset as md
 from orglib import stegano as stg
 from orglib import read_csv as rc
