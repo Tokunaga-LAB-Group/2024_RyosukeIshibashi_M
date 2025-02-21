@@ -23,7 +23,7 @@ import cupy as cp
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from tqdm import tqdm
-from models.model3 import InputLayer, ReservoirLayer, OutputLayer, ESN, Tikhonov, ParallelReservoirLayer, SerialReservoirLayer, BothReservoirLayer
+from models.model3 import InputLayer, ReservoirLayer, OutputLayer, ESN, Tikhonov, ParallelReservoirLayer, SerialReservoirLayer, BothReservoirLayer, MixedReservoirLayer
 
 
 
@@ -36,6 +36,8 @@ if __name__ == '__main__':
     u = cp.sin(2*cp.pi*time/period)  # 正弦波
 
 
+    fileName = "../output/20250122/nonlinearity_04.png"
+
 
     #### layer
     nodeNum = 100
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     # input = Input(N_u=1, N_x=N_x, input_scale=1.0, seed=0)
 
     # Input
-    inputLayer = InputLayer(1, nodeNum, inputScale=1.0)
+    inputLayer = InputLayer(1, 128, inputScale=1.0)
 
 
     
@@ -54,20 +56,24 @@ if __name__ == '__main__':
     #                       activation_func = cp.tanh, leaking_rate=1.0, seed=0)
 
     # Reservoir
-    reservoirLayer = ReservoirLayer(nodeNum, nodeNum, nodeNum, 0.2, 0.8, cp.tanh, 1.0)
+    # reservoirLayer = ReservoirLayer(nodeNum, nodeNum, nodeNum, 0.2, 0.8, cp.tanh, 1.0)
 
-    # resInput1 = InputLayer(16, 32, inputScale=1, seed=11)
-    # resRes1 = ReservoirLayer(32, 48, nodeNum, 0.2, 0.95, cp.tanh, 0.22, seed=101)
+    resInput1 = InputLayer(128, 64, inputScale=1, seed=11)
+    resRes1 = ReservoirLayer(64, 64, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=101)
 
-    # resInput2 = InputLayer(16, 16, inputScale=1, seed=12)
-    # resRes2 = ReservoirLayer(16, 16, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=102)
+    resInput2 = InputLayer(128, 64, inputScale=1, seed=12)
+    resRes2 = ReservoirLayer(64, 64, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=102)
 
-    # resInput3 = InputLayer(16, 16, inputScale=1, seed=13)
-    # resRes3 = ReservoirLayer(16, 64, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=103)
+    resInput3 = InputLayer(128, 64, inputScale=1, seed=13)
+    resRes3 = ReservoirLayer(64, 64, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=103)
 
-    # reservoirLayer = ParallelReservoirLayer(16, 64, [(resInput1, resRes1), (resInput2, resRes2)])
-    # reservoirLayer = SerialReservoirLayer(16, 64, [resRes2, resRes3], 1)
-    # reservoirLayer = BothReservoirLayer(16, 64, [(resInput1, resRes1), (resInput2, resRes2)], 1)
+    resInput4 = InputLayer(128, 64, inputScale=1, seed=13)
+    resRes4 = ReservoirLayer(64, 64, nodeNum, 0.3, 0.95, cp.tanh, 0.22, seed=103)
+
+    # reservoirLayer = ParallelReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)])
+    # reservoirLayer = SerialReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], 1)
+    # reservoirLayer = BothReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)], 1)
+    reservoirLayer = MixedReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], 1)
 
 
     # リザバー状態の時間発展
