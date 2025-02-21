@@ -41,11 +41,11 @@ python3 ./reproduction21.py \
     --reservoir_num 1 \
     --reservoir_seed 12235 \
     --mode both \
-    --N_x 300 \
+    --N_x 600 \
     --lamb 0.24 \
     --rho 0.9 \
     --leaking_rate 0.03 \
-    --tikhonov_beta 0.00001 \
+    --tikhonov_beta 0.0000001 \
     --figure_save_path ${FIG_SAVE_PATH} \
     --figure_save_name ${FIG_NAME} \
 
