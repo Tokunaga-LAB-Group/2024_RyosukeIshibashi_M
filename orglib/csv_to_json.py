@@ -7,7 +7,8 @@ import os
 import pandas as pd
 
 # ファイルパスとファイル名(複数可)
-FILEDIR="/home/ishibashi/Reservoir_ESN/input/Original_Data_csv/Figure5/Figure5AB" # とりあえず今はこれだけ
+# FILEDIR="/home/ishibashi/Reservoir_ESN/input/Original_Data_csv/Figure4/Figure4A"
+FILEDIR="/home/ishibashi/Reservoir_ESN/input/Original_Data_csv/Figure1/Figure1D"
 # FILENAME=["data_10-5_N2_300.csv", "data_10-6_N2_300.csv", "data_10-7_N2_300.csv" ,"data_10-8_N2_300.csv", "data_10-9_N2_300.csv", "data_0_N2_300.csv"]
 
 if __name__ == "__main__":
@@ -38,15 +39,16 @@ if __name__ == "__main__":
 
         # 濃度設定
         stim = "-" + filename.split(".")[0][-1]
-        # print(stim)
+        print(stim)
 
         # type設定
-        type = filename.split("_")[4]
-        # print(type)
+        # type = filename.split("/")[-1].split("_")[1].split(".")[0]
+        type = "N2"
+        print(type)
 
         # target設定
         target = filename.split("/")[-1].split("_")[0]
-        # print(target)
+        print(target)
 
         #ファイルからデータを読み込み
         # rows = csv.reader(F, quoting=csv.QUOTE_NONNUMERIC)
@@ -82,5 +84,5 @@ if __name__ == "__main__":
     # print(jsonData)
 
     # jsonファイルに記録
-    with open(os.path.join("/home/ishibashi/Reservoir_ESN/input", "data_unveiled.json"), 'w') as f:
+    with open(os.path.join("/home/ishibashi/Reservoir_ESN/input", "data_unveiled_fig1D.json"), 'w') as f:
         f.write(jsonData)
