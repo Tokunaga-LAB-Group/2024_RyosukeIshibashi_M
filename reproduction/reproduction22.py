@@ -90,6 +90,12 @@ def getArg():
                         help="Seed value for shuffling CSV files")
     parser.add_argument("--reservoir_seed", type=int, default=0,
                         help="Seed value for shuffling Reservoir connection")
+    
+    # optuna用
+    parser.add_argument("--study_name", type=str, required=True,
+                        help="The name of optuna study")
+    parser.add_argument("--storage", type=str, required=True,
+                        help="The name of optuna strage")
 
 
     # 解析結果を返す
