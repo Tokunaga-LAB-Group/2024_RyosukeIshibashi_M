@@ -122,11 +122,12 @@ if __name__ == "__main__":
 
     # # ファイルパスとファイル名(複数可)
     # FILEPATH="./input/"
-    # FILENAME="data_all.json"
+    # FILENAME="data_unveiled_fig5_ab.json"
 
     # jsonFname = FILEPATH + FILENAME
     # stim = -6
-    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAll(jsonFname, "p1", stim, seed=801)
+    # # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAll(jsonFname, "p1", stim, seed=801)
+    # inputDataAll, responseDataAll, responseMean, responseStdError = rj.readJsonRawUnveiled(jsonFname, "p2", "-6", "N2", "paQuasAr3")
 
     # jsonData = cp.array(responseDataAll)
     # print(jsonData.shape)
@@ -136,14 +137,15 @@ if __name__ == "__main__":
 
     # ax1 = fig.add_subplot(1,1,1)
     # ax1.set_title("Data", fontsize=15)
-    # ax1.plot(cp.asnumpy(jsonData[0:5].T), linewidth=0.3)
+    # ax1.plot(cp.asnumpy(jsonData[3:4].T), linewidth=0.3)
     # ax1.grid(linestyle=":")
     # ax1.set_xlabel("frame")
+    # ax1.set_xlim(0, 600)
 
     # # ax1.legend()
 
     # # 生成するファイル名
-    # fname = "output/20240905/dataset_all.png"
+    # fname = "output/20240930/dataset_sample.png"
     # # 保存
     # plt.savefig(fname, bbox_inches="tight", pad_inches=0.05, dpi=400)
 

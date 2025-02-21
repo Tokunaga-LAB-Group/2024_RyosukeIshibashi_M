@@ -4,7 +4,8 @@
 
 # ファイルパスとファイル名(複数可)
 FILEPATH="../input/"
-FILENAME="data_10-5_N2_300.csv data_10-6_N2_300.csv data_10-7_N2_300.csv data_10-8_N2_300.csv data_10-9_N2_300.csv data_0_N2_300.csv"
+#FILENAME="data_10-5_N2_300.csv data_10-6_N2_300.csv data_10-7_N2_300.csv data_10-8_N2_300.csv data_10-9_N2_300.csv data_0_N2_300.csv"
+FILENAME="data_10-6_N2_300.csv"
 
 # train時の値
 TRAIN_VALUE="0 1 0"
@@ -14,14 +15,14 @@ TRAIN_DURATION="300 200 200"
 TEST_VALUE="0 1 0"
 TEST_DURATION="300 200 200"
 # test時に予測するジアセチルの濃度(複数可)
-TEST="10-5"
+TEST="10-6"
 
 # 画像保存場所
-FIG_SAVE_PATH="../output/20240509/"
-FIG_SAVE_NAME="train_all_N2_300_test_105_01.png"
+FIG_SAVE_PATH="../output/20240718/"
+FIG_SAVE_NAME="classification_106_23.png"
 
 
-python3 ./classification_01.py \
+python3 ./classification_03.py \
     --csv_filepath ${FILEPATH} \
     --csv_filename ${FILENAME} \
     --data_length 700 \
@@ -29,12 +30,14 @@ python3 ./classification_01.py \
     --train_duration ${TRAIN_DURATION} \
     --test_value ${TEST_VALUE} \
     --test_duration ${TEST_DURATION} \
+    --bias 0 \
     --test_name ${TEST} \
     --reservoir_num 1 \
-    --N_x 400 \
+    --N_x 600 \
     --lamb 0.24 \
     --rho 0.9 \
     --leaking_rate 0.1 \
+    --tikhonov_beta 0.0001 \
     --figure_save_path ${FIG_SAVE_PATH} \
     --figure_save_name ${FIG_SAVE_NAME} \
 
