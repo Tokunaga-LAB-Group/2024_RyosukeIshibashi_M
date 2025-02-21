@@ -346,7 +346,7 @@ def makeFig2(flag, model, tLabel, tData, tDataStd, tY, rmse, nrmse, viewLen=2450
 
 
 # 出力画像生成
-def makeFig3(flag, title, output, GT, stde, model, rmse, nrmse):
+def makeFig3(flag, title, output, GT, stde, model, rmse, nrmse, figName=None):
     '''
     param flag: 画像を保存するかを管理するフラグ trueで保存
     param title: 画像タイトル
@@ -373,7 +373,8 @@ def makeFig3(flag, title, output, GT, stde, model, rmse, nrmse):
     ax1.plot(cp.asnumpy(GT), color="k", label="data mean", linewidth=0.5)
 
     ax1.set_xlim(-10, 600)
-    ax1.set_ylim(0.5, 2.0)
+    # ax1.set_ylim(0.3, 3.7)
+    ax1.set_ylim(0.4, 3.0)
 
     ax1.legend()
 
@@ -382,7 +383,8 @@ def makeFig3(flag, title, output, GT, stde, model, rmse, nrmse):
     if flag:
 
         # 生成するファイル名
-        fname = args.figure_save_path + args.figure_save_name
+        # fname = args.figure_save_path + args.figure_save_name
+        fname = args.figure_save_path + figName
         # jsonファイルの名前
         jsonFname = args.json_filepath + args.json_filename
         
