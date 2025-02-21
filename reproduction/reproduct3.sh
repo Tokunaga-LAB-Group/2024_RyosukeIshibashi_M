@@ -21,6 +21,8 @@ STIMULATE=-5
 FIG_SAVE_PATH="../output/20241101/"
 FIG_SAVE_NAME="result_105_01.png"
 
+# optunaのstudy_name
+STUDY_NAME="ESN_mixed_all_31_1110"
 
 for STIM in -6 #-5 -6 -7 -8 -9 -0
 do
@@ -50,10 +52,12 @@ python3 ./reproduction22.py \
     --lamb 0.24 \
     --rho 0.9 \
     --leaking_rate 0.03 \
-    --tikhonov_beta 0.00001 \
+    --tikhonov_beta 0.0000001 \
     --figure_save_path ${FIG_SAVE_PATH} \
     --figure_save_name ${FIG_NAME} \
-    > ${FIG_SAVE_PATH}/optuna03_${i}.out \
+    --study_name ${STUDY_NAME} \
+    --storage "mysql://ishibashi@127.0.0.1/ishibashi_optuna_03" \
+    > ${FIG_SAVE_PATH}/${STUDY_NAME}_${i}.log \
     &
 
 # そのままだと次の処理の実行が早すぎる(かもしれない)ので少し待つ
