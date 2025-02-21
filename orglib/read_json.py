@@ -210,7 +210,68 @@ def readJsonAllUnveiled2(filename, pattern, stim, type, target):
 
     return np.array(stimDataAll), np.array(responseDataAll), np.array(stimDataTest), np.array(responseMean), np.array(responseStdError)
 
+# テストデータを全濃度にする
+def readJsonAllUnveiled3(filename, pattern, stim, type, target):
+    """
+    param filename: 読み込みたいjsonファイル
+    param pattern: 読み込みたい匂い刺激パターン(今は 'p2' だけ)
+    param stim: 読み込みたい匂い濃度 (-5, -6, -7, -8, -9, -0 (dtype=string)) **未使用**
+    param type: 読み込みたい線虫のタイプ(N2, odr-3)
+    param target: 読み込みたいデータの対象(GCaMP, paQuasAr3)
+    return: stimDataAll, responseDataAll, stimDataTest, responseMean, responseStdError
+    """
 
+    # 全濃度のデータを取得
+    stimDataAll = []
+    responseDataAll = []
+    stimDataTest = []
+    responseMean = []
+    responseStdError = []
+    for s in ["-5", "-6", "-7", "-8", "-9", "-0"]:
+        sData, sResponse, rMean, rError = readJsonRawUnveiled(filename, pattern, s, type, target)
+        # 学習データ
+        stimDataAll.extend([sData] * len(sResponse))
+        responseDataAll.extend(sResponse)
+        # テストデータ
+        if s in ["-5", "-6", "-7", "-8", "-9"]: # 濃度0の時は除外
+            stimDataTest.append(sData)
+            responseMean.append(rMean)
+            responseStdError.append(rError)
+
+
+    return np.array(stimDataAll), np.array(responseDataAll), np.array(stimDataTest), np.array(responseMean), np.array(responseStdError)
+
+
+# テストデータを全濃度にする(fig 1D)
+def readJsonAllUnveiled4(filename, pattern, stim, type, target):
+    """
+    param filename: 読み込みたいjsonファイル
+    param pattern: 読み込みたい匂い刺激パターン(今は 'p2' だけ)
+    param stim: 読み込みたい匂い濃度 (-5, -6, -7, -8, -9, -0 (dtype=string)) **未使用**
+    param type: 読み込みたい線虫のタイプ(N2, odr-3)
+    param target: 読み込みたいデータの対象(GCaMP, paQuasAr3)
+    return: stimDataAll, responseDataAll, stimDataTest, responseMean, responseStdError
+    """
+
+    # 全濃度のデータを取得
+    stimDataAll = []
+    responseDataAll = []
+    stimDataTest = []
+    responseMean = []
+    responseStdError = []
+    for s in ["-5", "-6", "-7", "-8", "-9"]:
+        sData, sResponse, rMean, rError = readJsonRawUnveiled(filename, pattern, s, type, target)
+        # 学習データ
+        stimDataAll.extend([sData] * len(sResponse))
+        responseDataAll.extend(sResponse)
+        # テストデータ
+        if s in ["-5", "-6", "-7", "-8", "-9"]: # 濃度0の時は除外
+            stimDataTest.append(sData)
+            responseMean.append(rMean)
+            responseStdError.append(rError)
+
+
+    return np.array(stimDataAll), np.array(responseDataAll), np.array(stimDataTest), np.array(responseMean), np.array(responseStdError)
 
 
 
@@ -218,16 +279,41 @@ if __name__ == "__main__":
     print("hoge")
 
     # stim, data, mean, var = readJsonRaw("../input/data_all.json", "p1", -6)
-    stim, data, mean, stde = readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig5_ab.json", "p2", "-6", "N2", "paQuasAr3")
+    # stim, data, mean, stde = readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig5_ab.json", "p2", "-6", "N2", "paQuasAr3")
     # stimAll, dataAll, stimTest, mean, stde = readJsonAllUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig5_ab.json", "p2", "-6", "N2", "paQuasAr3")
+    stimAll, dataAll, stimTest, mean, stde = readJsonAllUnveiled4("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig1D.json", "p2", "-6", "N2", "paQuasAr3")
+    # stim, data, mean, stde = readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "N2", "paQuasAr3")
     # stim, data, mean, var = readJsonProcess("../input/data_all.json", "p1", -6)
     # stimAll, dataAll, stimTest, mean, stde = readJsonAll("../input/data_all.json", "p1", -6)
     # stimAll, dataAll, stimTest, mean, stde = readJsonPert("../input/data_all.json", "p1", -6, isAll=False)
 
     # inputData, responseData, responseMean, responseStdError = rj.readJsonProcess(jsonFname, "p1", stim)
 
-    print(stim.shape, data.shape)
-    # print(stimAll.shape, dataAll.shape)
-    # print(stimTest.shape)
+    # stimAll = np.array([stim]*len(data))
+    # dataAll = np.array(data)
+    # stimTest = np.array([stim])
+    # mean = np.array([mean])
+    # stde = np.array([stde])
+
+    import cupy as cp
+
+    # print(stim.shape, data.shape)
+    # print(mean.shape, stde.shape)
+    print(stimAll.shape, dataAll.shape)
+    print(stimTest.shape, mean.shape, stde.shape)
     # print(mean)
     # print(stde)
+    # print(cp.append(stimAll1, [stim]*len(data), axis=0).shape)
+
+    # testInput = np.array([iDataTest + 0.1 for iDataTest in stimTest])
+    # testGT = np.array([rMean * 100 - 99 for rMean in mean])
+    # print(testInput.shape, testGT.shape)
+
+    # # print(np.append([stim], [stim], axis=0)[:1].shape, np.append([stim], [stim], axis=0)[1:].shape)
+
+    # for test, res in zip(stimTest, mean):
+    #     print(test.shape, res.shape)
+
+    # amp = 1
+    # print(dataAll[0])
+    # print(dataAll[0]*amp + 1-amp)
