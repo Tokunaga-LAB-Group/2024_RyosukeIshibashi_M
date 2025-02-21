@@ -54,11 +54,8 @@ def readNRMSE(filename):
 if __name__ == "__main__":
 
     filenames = [
-        "/home/ishibashi/Reservoir_ESN/output/20231113/test_data_all_N2_300_result_typical_10-9_01.png",
-        "/home/ishibashi/Reservoir_ESN/output/20231113/test_data_all_N2_300_result_typical_10-9_02.png",
-        "/home/ishibashi/Reservoir_ESN/output/20231113/test_data_all_N2_300_result_typical_10-9_03.png",
-        "/home/ishibashi/Reservoir_ESN/output/20231113/test_data_all_N2_300_result_typical_10-9_04.png",
-        "/home/ishibashi/Reservoir_ESN/output/20231113/test_data_all_N2_300_result_typical_10-9_05.png"
+        "/home/ishibashi/Reservoir_ESN/output/20250123/result_mixed_all_31_0111_-6_03.png",
+        "/home/ishibashi/Reservoir_ESN/output/20250123/result_mixed_all_31_0111_egl19_03.png",
     ]
 
     # 読む
@@ -71,4 +68,5 @@ if __name__ == "__main__":
     print(nrmses)
     print("mean = " + str(nrmses.mean()))
     print("var  = " + str(nrmses.var()))
+    # print(st.stgRead("/home/ishibashi/Reservoir_ESN/output/20241008/result_both_-6_01.png"))
 
