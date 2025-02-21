@@ -438,7 +438,45 @@ class Objective:
         self.testGT = testGT
         self.transLen = transLen
 
+    # 学習部分を関数化
+    def modelTrain(self, model:ESN, optimizer:Tikhonov, trainInput, trainGT, testInput, testGT, transLen, dropout=None, changePoint=0):
+        # train
+        trainOutput = model.trainMini(trainInput, trainGT, optimizer, transLen=transLen, dropout=dropout, changePoint=changePoint)
+        # trainOutput = model.train(trainInput.reshape(-1), trainGT.reshape(-1), optimizer, transLen=transLen)
 
+        # print(outputLayer.internalConnection.shape)
+
+        # test
+        # 複数濃度の平均を使う？
+        NRMSE = 0
+        i = 0
+        for tInput, tGT in zip(testInput, testGT):
+            # print(tInput.shape, tGT.shape)
+            model.reservoirLayer.resetReservoirState()
+            if i < 1:
+                testOutput = model.predict(tInput) 
+            else:
+                testOutput = model.predict(tInput, dropout=dropout)
+
+
+            # # 出力
+            # model.reservoirLayer.resetReservoirState()
+            # testY = model.predict(testGT)
+
+
+
+            # 評価
+            testOutput = testOutput.reshape(-1) # flatten
+            # 最初の方を除く
+            RMSE = cp.sqrt(((tGT[200:] - testOutput[200:]) ** 2).mean())
+            NRMSE += RMSE / cp.sqrt(cp.var(tGT[200:]))
+            # print('RMSE =', RMSE)
+            # print('NRMSE =', NRMSE)
+            i += 1
+
+        NRMSE /= len(testInput)
+
+        return NRMSE
 
     def __call__(self, trial):
         # 学習対象を設定
