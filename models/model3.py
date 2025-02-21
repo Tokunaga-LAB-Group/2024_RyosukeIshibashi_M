@@ -231,31 +231,81 @@ class MultiReservoirLayer(BaseLayer):
         self.internalState = cp.empty(0)
         if dropout == None:
             dropout=[1]*len(self.layers)
+        maskValue = 0
 
         # エラー処理はいったん放置
         if self.mode == "parallel":
             for i in range(0, len(self.layers)):
                 (input, reservoir) = self.layers[i]
+                if dropout[i] == 0:
+                    self.internalState = cp.append(self.internalState, cp.array([maskValue]*reservoir.outputDimention))
+                    continue
                 inputsVector = input(inputVector)
                 reservoirsVector = reservoir(inputsVector)
-                self.internalState = cp.append(self.internalState, reservoirsVector * dropout[i])
+                self.internalState = cp.append(self.internalState, reservoirsVector)
 
         elif self.mode == "serial":
             (_, reservoir) = self.layers[0]
-            reservoirsVector = reservoir(inputVector)
-            for i in range(1, len(self.layers)):
+            if dropout[0] == 0:
+                # reservoirsVector = cp.array([maskValue]*reservoir.outputDimention)
+                (_, reservoir) = self.layers[1]
+                reservoirsVector = reservoir(inputVector)
+            elif dropout[1] == 0:
+                reservoirsVector = reservoir(inputVector)
+                (_, reservoir) = self.layers[1]
+                reservoirsVector = reservoir([maskValue]*reservoir.outputDimention)
+            else:
+                reservoirsVector = reservoir(inputVector)
+                (_, reservoir) = self.layers[1]
+                reservoirsVector = reservoir(reservoirsVector * self.intensity[1])
+
+            for i in range(2, len(self.layers)):
                 (_, reservoir) = self.layers[i]
-                reservoirsVector = reservoir(reservoirsVector * self.intensity[i-1])
+                if dropout[i] == 0:
+                    continue
+                reservoirsVector = reservoir(reservoirsVector * self.intensity[i])
             self.internalState = reservoirsVector
         
         elif self.mode == "both":
             prevReservoirsVector = cp.zeros(1)
             for i in range(0, len(self.layers)):
                 (input, reservoir) = self.layers[i]
+                if dropout[i] == 0:
+                    self.internalState = cp.append(self.internalState, cp.array([maskValue]*reservoir.outputDimention))
+                    continue
                 inputsVector = input(inputVector)
                 reservoirsVector = reservoir(cp.append(inputsVector, prevReservoirsVector * self.intensity[i]))
-                self.internalState = cp.append(self.internalState, reservoirsVector * dropout[i])
+                self.internalState = cp.append(self.internalState, reservoirsVector)
                 prevReservoirsVector = reservoirsVector
+
+        elif self.mode == "mixed":
+            (_, reservoir) = self.layers[0]
+            if dropout[0] == 0:
+                reservoirsVector = cp.array([maskValue]*reservoir.outputDimention)
+                self.internalState = reservoirsVector
+                (_, reservoir) = self.layers[1]
+                reservoirsVector = reservoir(inputVector)
+                self.internalState = cp.append(self.internalState, reservoirsVector)
+            elif dropout[1] == 0:
+                reservoirsVector = reservoir(inputVector)
+                self.internalState = reservoirsVector
+                (_, reservoir) = self.layers[1]
+                reservoirsVector = reservoir([maskValue]*reservoir.outputDimention)
+                self.internalState = cp.append(self.internalState, reservoirsVector)
+            else:
+                reservoirsVector = reservoir(inputVector)
+                self.internalState = reservoirsVector
+                (_, reservoir) = self.layers[1]
+                reservoirsVector = reservoir(reservoirsVector * self.intensity[1])
+                self.internalState = cp.append(self.internalState, reservoirsVector)
+            
+            for i in range(2, len(self.layers)):
+                (_, reservoir) = self.layers[i]
+                if dropout[i] == 0:
+                    self.internalState = cp.append(self.internalState, cp.array([maskValue]*reservoir.outputDimention))
+                    continue
+                reservoirsVector = reservoir(reservoirsVector * self.intensity[i])
+                self.internalState = cp.append(self.internalState, reservoirsVector)
 
 
         return self.internalState
@@ -671,13 +721,14 @@ class ESN:
     
 
     # ミニバッチ学習
-    def trainMini(self, U, D, optimizer:Tikhonov, transLen=None, dropout=None):
+    def trainMini(self, U, D, optimizer:Tikhonov, transLen=None, dropout=None, changePoint=0):
         '''
         param U: 入力データ，ミニバッチ数*inputDimention*データ長
         param D: 入力データに対する正解データ，ミニバッチ数*outputDimention*データ長
         param optimizer: 学習器
         param transLen: 過渡期の長さ
         param dropout: リザバー層のドロップアウトを設定 初期値None listの0/1で指定
+        param changePoint: マスクを行う切り替えポイント(ポイント以降でマスク)
         return: 学習前のモデル出力， outputDimention*データ長
         '''
 
@@ -715,7 +766,7 @@ class ESN:
 
 
                 #### Reservoir layer
-                reservoirVector = self.reservoirLayer(inputVector, dropout)
+                reservoirVector = self.reservoirLayer(inputVector, None if udi<changePoint else dropout)
 
                 # 分類問題の場合は窓幅分の平均を取得(要修正)
                 if self.classification:
