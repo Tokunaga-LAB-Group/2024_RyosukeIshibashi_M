@@ -553,28 +553,56 @@ def main():
     # Reservoir
     # reservoirLayer = ReservoirLayer(128, 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed)
 
-    resInput1 = InputLayer(128, 64, inputScale=1, seed=11)
-    resRes1 = ReservoirLayer(64 if resMode!="serial" else 128, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+1)
+    inputScale_01 =  0.108
+    inputScale_02 =  3.405
+    inputScale_03 = -6.108
+    inputScale_04 = -0.924
+    leaking_rate_01 = 0.077
+    leaking_rate_02 = 0.137
+    leaking_rate_03 = 0.929
+    leaking_rate_04 = 0.143
+    intensity_01 =  7.508
+    intensity_02 =  2.115
+    intensity_03 = -9.344
+    intensity_04 =  1.377
 
-    resInput2 = InputLayer(128, 64, inputScale=1, seed=12)
-    resRes2 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+2)
+    # stList = ["-5", "-6", "-7", "-8", "-9"]
+    stList = ["-6", "egl19"]
+    dropout = [1, 1, 1, 0]
+    drop = "1110"
+    # def figNameTmp(mode, drop, stim): return f"result_{mode}_all_30_{stim}_01.png"
+    def figNameTmp(mode, drop, stim): return f"result_{mode}_all_31_{drop}_{stim}_03.png"
 
-    resInput3 = InputLayer(128, 64, inputScale=1 if resMode!="both" else 1/2, seed=13)
-    resRes3 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+3)
+    testDropout = [1, 1, 1, 1] if not stim == "egl19" else dropout
+    tdrop = "1111" if not stim == "egl19" else drop
+    changePoint = 5
 
-    resInput4 = InputLayer(128, 64, inputScale=1 if resMode!="both" else 1/4, seed=14)
-    resRes4 = ReservoirLayer(64, 64 if resMode!="serial" else 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed+4)
+
+
+    resInput1 = InputLayer(128, 64, inputScale=inputScale_01, seed=11)
+    resRes1 = ReservoirLayer(64 if resMode not in ["serial", "mixed"] else 128, 64, nodeNum, args.lamb, args.rho, cp.tanh, leaking_rate_01, seed=args.reservoir_seed+1)
+
+    resInput2 = InputLayer(128, 64, inputScale=inputScale_02, seed=12)
+    resRes2 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, leaking_rate_02, seed=args.reservoir_seed+2)
+
+    resInput3 = InputLayer(128, 64, inputScale=inputScale_03, seed=13)
+    resRes3 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, leaking_rate_03, seed=args.reservoir_seed+3)
+
+    resInput4 = InputLayer(128, 64, inputScale=inputScale_04, seed=14)
+    resRes4 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, leaking_rate_04, seed=args.reservoir_seed+4)
 
     if resMode == "serial":
-        reservoirLayer = SerialReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], 1)
+        reservoirLayer = SerialReservoirLayer(inputLayer.outputDimention, 64, [resRes1, resRes2, resRes3, resRes4], [intensity_01, intensity_02, intensity_03, intensity_04])
     elif resMode == "parallel":
         reservoirLayer = ParallelReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)])
     elif resMode == "both":
-        reservoirLayer = BothReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)], 1)
+        reservoirLayer = BothReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)], [intensity_01, intensity_02, intensity_03, intensity_04])
+    elif resMode == "mixed":
+        reservoirLayer = MixedReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], [intensity_01, intensity_02, intensity_03, intensity_04])
 
 
     # Output
-    outputLayer = OutputLayer(256, 1)
+    outputLayer = OutputLayer(256 if not resMode=="serial" else 64, 1)
 
 
     #### ESN
@@ -587,39 +615,53 @@ def main():
     # 学習
 
     # train
-    trainOutput = model.trainMini(trainInput, trainGT, optimizer, transLen=transLen)
+    trainOutput = model.trainMini(trainInput, trainGT, optimizer, transLen=transLen, dropout=dropout, changePoint=changePoint)
     # trainOutput = model.train(trainInput.reshape(-1), trainGT.reshape(-1), optimizer, transLen=transLen)
 
     # print(outputLayer.internalConnection.shape)
 
-    # test
-    model.reservoirLayer.resetReservoirState()
-    testOutput = model.predict(testInput)
+    testOutputData = {}
+    for st in stList:
+        # テストデータ
+
+        testInput = testInputDict[st]
+        testGT = testGTDict[st]
+        responseStdError = responseStdErrorDict[st]
+
+        testDropout = [1, 1, 1, 1] if not st == "egl19" else dropout
+        tdrop = "1111" if not st == "egl19" else drop
 
 
-    # # 出力
-    # model.reservoirLayer.resetReservoirState()
-    # testY = model.predict(testGT)
+        # test
+        model.reservoirLayer.resetReservoirState()
+        testOutput = model.predict(testInput, dropout=testDropout)
+
+
+        # # 出力
+        # model.reservoirLayer.resetReservoirState()
+        # testY = model.predict(testGT)
 
 
 
-    # 評価
-    testOutput = testOutput.reshape(-1) # flatten
-    # 最初の方を除く
-    RMSE = cp.sqrt(((testGT[200:] - testOutput[200:]) ** 2).mean())
-    NRMSE = RMSE / cp.sqrt(cp.var(testGT[200:]))
-    print('RMSE =', RMSE)
-    print('NRMSE =', NRMSE)
+        # 評価
+        testOutput = testOutput.reshape(-1) # flatten
+        testOutputData[st] = testOutput
+        # 最初の方を除く
+        RMSE = cp.sqrt(((testGT[200:] - testOutput[200:]) ** 2).mean())
+        NRMSE = RMSE / cp.sqrt(cp.var(testGT[200:]))
+        print('RMSE =', RMSE)
+        print('NRMSE =', NRMSE)
 
-    # R2 = testDataset.dataR2(testY)
-    # print("R2 =", R2)
+        # R2 = testDataset.dataR2(testY)
+        # print("R2 =", R2)
 
-    # フリーラン
-    # model.Reservoir.reset_reservoir_state()
-    # testY = model.run(testLabel)
+        # フリーラン
+        # model.Reservoir.reset_reservoir_state()
+        # testY = model.run(testLabel)
 
-    # makeFig2(saveFig, model, cp.asnumpy(testInput), cp.asnumpy(testGT), cp.asnumpy(testGT), cp.asnumpy(testOutput), RMSE, NRMSE)
-    makeFig3(saveFig, f"proposal, train_All, test_{stim}, lr_{args.leaking_rate}, beta_{args.tikhonov_beta}", testOutput, testGT, responseStdError*100, model, RMSE, NRMSE)
+        # makeFig2(saveFig, model, cp.asnumpy(testInput), cp.asnumpy(testGT), cp.asnumpy(testGT), cp.asnumpy(testOutput), RMSE, NRMSE)
+        # makeFig3(saveFig, f"{args.mode}, train_All, test_{st}, beta_{args.tikhonov_beta}", testOutput, testGT, responseStdError*100, model, RMSE, NRMSE, figName=figNameTmp(resMode, drop, st))
+        makeFig3(saveFig, f"sequential, train_All_{drop}, test_{st}_{tdrop}, beta_{args.tikhonov_beta}", testOutput, testGT, responseStdError*100, model, RMSE, NRMSE, figName=figNameTmp(resMode, drop, st))
 
 
     # # csvファイルに記録
