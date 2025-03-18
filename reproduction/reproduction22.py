@@ -480,9 +480,32 @@ class Objective:
 
     def __call__(self, trial):
         # 学習対象を設定
-        nodeNum = trial.suggest_int("nodeNum", 150, 600, step=50)
-        leaking_rate = trial.suggest_float("leaking_rate", 0.001, 0.1, log=True)
-        tikhonov_beta = trial.suggest_float("tikhonov_beta", 1e-7, 1e-1, log=True)
+        # nodeNum_01 = trial.suggest_int("nodeNum_01", 300, 800, step=50)
+        nodeNum_01 = 600
+        inputScale_01 = trial.suggest_float("inputScale_01", -10, 10, step=0.001)
+        leaking_rate_01 = trial.suggest_float("leaking_rate_01", 0.001, 1.0, step=0.001)
+        intensity_01 = trial.suggest_float("intensity_01", -10, 10, step=0.001)
+        
+        # nodeNum_02 = trial.suggest_int("nodeNum_02", 300, 800, step=50)
+        nodeNum_02 = 600
+        inputScale_02 = trial.suggest_float("inputScale_02", -10, 10, step=0.001)
+        leaking_rate_02 = trial.suggest_float("leaking_rate_02", 0.001, 1.0, step=0.001)
+        intensity_02 = trial.suggest_float("intensity_02", -10, 10, step=0.001)
+        
+        # nodeNum_03 = trial.suggest_int("nodeNum_03", 300, 800, step=50)
+        nodeNum_03 = 600
+        inputScale_03 = trial.suggest_float("inputScale_03", -10, 10, step=0.001)
+        leaking_rate_03 = trial.suggest_float("leaking_rate_03", 0.001, 1.0, step=0.001)
+        intensity_03 = trial.suggest_float("intensity_03", -10, 10, step=0.001)
+
+        # nodeNum_04 = trial.suggest_int("nodeNum_04", 300, 800, step=50)
+        nodeNum_04 = 600
+        inputScale_04 = trial.suggest_float("inputScale_04", -10, 10, step=0.001)
+        leaking_rate_04 = trial.suggest_float("leaking_rate_04", 0.001, 1.0, step=0.001)
+        intensity_04 = trial.suggest_float("intensity_04", -10, 10, step=0.001)
+
+        # tikhonov_beta = trial.suggest_float("tikhonov_beta", 1e-9, 1e-5, log=True)
+        tikhonov_beta = args.tikhonov_beta
 
 
         # モデル生成
@@ -496,28 +519,33 @@ class Objective:
         # Reservoir
         # reservoirLayer = ReservoirLayer(128, 256, nodeNum, args.lamb, args.rho, cp.tanh, args.leaking_rate, seed=args.reservoir_seed)
 
-        resInput1 = InputLayer(128, 64, inputScale=1, seed=11)
-        resRes1 = ReservoirLayer(64 if self.resMode!="serial" else 128, 64, nodeNum, args.lamb, args.rho, cp.tanh, leaking_rate, seed=args.reservoir_seed+1)
+        # 入力層とリザバー層のシード値を毎回変えてみる
+        seedGen = cp.random.default_rng()
 
-        resInput2 = InputLayer(128, 64, inputScale=1, seed=12)
-        resRes2 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, leaking_rate, seed=args.reservoir_seed+2)
+        resInput1 = InputLayer(128, 64, inputScale=inputScale_01, seed=int(seedGen.integers(10000000)))
+        resRes1 = ReservoirLayer(64 if self.resMode not in ["serial", "mixed"] else 128, 64, nodeNum_01, args.lamb, args.rho, cp.tanh, leaking_rate_01, seed=int(seedGen.integers(10000000).get()))
 
-        resInput3 = InputLayer(128, 64, inputScale=1 if self.resMode!="both" else 1/2, seed=13)
-        resRes3 = ReservoirLayer(64, 64, nodeNum, args.lamb, args.rho, cp.tanh, leaking_rate, seed=args.reservoir_seed+3)
+        resInput2 = InputLayer(128, 64, inputScale=inputScale_02, seed=int(seedGen.integers(10000000).get()))
+        resRes2 = ReservoirLayer(64, 64, nodeNum_02, args.lamb, args.rho, cp.tanh, leaking_rate_02, seed=int(seedGen.integers(10000000).get()))
 
-        resInput4 = InputLayer(128, 64, inputScale=1 if self.resMode!="both" else 1/4, seed=14)
-        resRes4 = ReservoirLayer(64, 64 if self.resMode!="serial" else 256, nodeNum, args.lamb, args.rho, cp.tanh, leaking_rate, seed=args.reservoir_seed+4)
+        resInput3 = InputLayer(128, 64, inputScale=inputScale_03 if self.resMode!="both" else inputScale_03, seed=int(seedGen.integers(10000000).get()))
+        resRes3 = ReservoirLayer(64, 64, nodeNum_03, args.lamb, args.rho, cp.tanh, leaking_rate_03, seed=int(seedGen.integers(10000000).get()))
+
+        resInput4 = InputLayer(128, 64, inputScale=inputScale_04 if self.resMode!="both" else inputScale_04, seed=int(seedGen.integers(10000000).get()))
+        resRes4 = ReservoirLayer(64, 64, nodeNum_04, args.lamb, args.rho, cp.tanh, leaking_rate_04, seed=int(seedGen.integers(10000000).get()))
 
         if self.resMode == "serial":
-            reservoirLayer = SerialReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], 1)
+            reservoirLayer = SerialReservoirLayer(inputLayer.outputDimention, 64, [resRes1, resRes2, resRes3, resRes4], [intensity_01, intensity_02, intensity_03, intensity_04])
         elif self.resMode == "parallel":
             reservoirLayer = ParallelReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)])
         elif self.resMode == "both":
-            reservoirLayer = BothReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)], 1)
+            reservoirLayer = BothReservoirLayer(inputLayer.outputDimention, 256, [(resInput1, resRes1), (resInput2, resRes2), (resInput3, resRes3), (resInput4, resRes4)], [intensity_01, intensity_02, intensity_03, intensity_04])
+        elif self.resMode == "mixed":
+            reservoirLayer = MixedReservoirLayer(inputLayer.outputDimention, 256, [resRes1, resRes2, resRes3, resRes4], [intensity_01, intensity_02, intensity_03, intensity_04])
 
 
         # Output
-        outputLayer = OutputLayer(256, 1)
+        outputLayer = OutputLayer(256 if not self.resMode=="serial" else 64, 1)
 
 
         #### ESN
@@ -529,38 +557,48 @@ class Objective:
 
         # 学習
 
-        # train
-        trainOutput = model.trainMini(self.trainInput, self.trainGT, optimizer, transLen=self.transLen)
-        # trainOutput = model.train(trainInput.reshape(-1), trainGT.reshape(-1), optimizer, transLen=transLen)
+        # # N2とodr-3で分ける
+        # trainInputN2 = self.trainInput[:136]; trainInputOdr3 = self.trainInput[136:]
+        # trainGTN2    = self.trainGT[:136];    trainGTOdr3    = self.trainGT[136:]
+        # testInputN2  = self.testInput[:5];    testInputOdr3  = self.testInput[5:]
+        # testGTN2     = self.testGT[:5];       testGTOdr3     = self.testGT[5:]
+        # # N2とegl-19で分ける
+        # trainInputN2 = self.trainInput[:5]; trainInputEgl19 = self.trainInput[5:]
+        # trainGTN2    = self.trainGT[:5];    trainGTEgl19    = self.trainGT[5:]
+        # testInputN2  = self.testInput[:1];  testInputEgl19  = self.testInput[1:]
+        # testGTN2     = self.testGT[:1];     testGTEgl19     = self.testGT[1:]
 
-        # print(outputLayer.internalConnection.shape)
+        # dropout指定
+        dropout=[1, 1, 1, 0]
 
-        # test
+        ### single objective
         model.reservoirLayer.resetReservoirState()
-        testOutput = model.predict(self.testInput)
+        optimizer.resetValue()
+        NRMSE = self.modelTrain(model, optimizer, trainInput, trainGT, testInput, testGT, self.transLen, dropout=dropout, changePoint=5)
+        # NRMSE = self.modelTrain(model, optimizer, trainInput, trainGT, testInput, testGT, self.transLen)
 
-
-        # # 出力
+        ### multi objective 
+        # # N2
         # model.reservoirLayer.resetReservoirState()
-        # testY = model.predict(testGT)
-
-
-
-        # 評価
-        testOutput = testOutput.reshape(-1) # flatten
-        # 最初の方を除く
-        RMSE = cp.sqrt(((self.testGT[200:] - testOutput[200:]) ** 2).mean())
-        NRMSE = RMSE / cp.sqrt(cp.var(self.testGT[200:]))
-        # print('RMSE =', RMSE)
-        # print('NRMSE =', NRMSE)
+        # optimizer.resetValue()
+        # NRMSE_N2 = self.modelTrain(model, optimizer, trainInputN2, trainGTN2, testInputN2, testGTN2, self.transLen)
+        # # odr-3
+        # model.reservoirLayer.resetReservoirState()
+        # # optimizer.resetValue()
+        # NRMSE_ODR3 = self.modelTrain(model, optimizer, trainInputOdr3, trainGTOdr3, testInputOdr3, testGTOdr3, self.transLen, dropout=dropout)
+        # # egl-19
+        # model.reservoirLayer.resetReservoirState()
+        # # optimizer.resetValue()
+        # NRMSE_EGL19 = self.modelTrain(model, optimizer, trainInputEgl19, trainGTEgl19, testInputEgl19, testGTEgl19, self.transLen, dropout=dropout)
 
         return NRMSE
+        # return NRMSE_N2, NRMSE_EGL19
 
 
 
 
-# メイン処理
-def main():
+# データセットを作る
+def dataset():
     # データ生成
 
     # 諸々のパラメータ
@@ -595,8 +633,53 @@ def main():
     # inputData, responseData, responseMean, responseStdError = rj.readJsonProcess(jsonFname, "p1", stim)
     # inputData, responseData, responseMean, responseStdError = rj.readJsonRawUnveiled(jsonFname, "p3", stim, type="N2", target="paQuasAr3")
     # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAll(jsonFname, "p1", stim, seed=801)
-    inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+
+    ### Unveiledのデータ
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    
     # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled2(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled3(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled4(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+
+    # # Egl-19だけ
+    # inputDataAll, responseDataAll, responseMean, responseStdError = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json","p2", "-6", type="egl-19", target="paQuasAr3")
+    # inputDataTest = cp.array([inputDataAll])
+    # inputDataAll = cp.array([inputDataAll]*len(responseDataAll))
+    # responseDataAll = cp.array(responseDataAll)
+    # responseMean = cp.array([responseMean])
+    # responseStdError = cp.array([responseStdError])
+
+    # N2とOdr-3
+    # inputDataAllN2, responseDataAllN2, inputDataTestN2, responseMeanN2, responseStdErrorN2 = rj.readJsonAllUnveiled3(jsonFname, "p2", stim,"N2", "paQuasAr3")
+    # inputDataAllOdr3, responseDataAllOdr3, inputDataTestOdr3, responseMeanOdr3, responseStdErrorOdr3 = rj.readJsonAllUnveiled3(jsonFname, "p2", stim, "odr-3", "paQuasAr3")
+    # N2とEgl-19
+    # inputDataAllN2, responseDataAllN2, responseMeanN2, responseStdErrorN2 = rj.readJsonRawUnveiled(jsonFname, "p2", "-6", "N2", "paQuasAr3")
+    # inputDataAllN2, responseDataAllN2, inputDataTestN2, responseMeanN2, responseStdErrorN2 = rj.readJsonAllUnveiled3(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    inputDataAllN2, responseDataAllN2, responseMeanN2, responseStdErrorN2 = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "N2", "paQuasAr3")
+    inputDataAllEgl19, responseDataAllEgl19, responseMeanEgl19, responseStdErrorEgl19 = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "egl-19", "paQuasAr3")
+
+    # くっつける
+    # N2 odr-3
+    # inputDataAll = cp.append(inputDataAllN2, inputDataAllOdr3, axis=0)
+    # responseDataAll = cp.append(responseDataAllN2, responseDataAllOdr3, axis=0)
+    # inputDataTest = cp.append(inputDataTestN2, inputDataTestOdr3, axis=0)
+    # responseMean = cp.append(responseMeanN2, responseMeanOdr3, axis=0)
+    # responseStdError = cp.append(responseStdErrorN2, responseStdErrorOdr3, axis=0)
+    # # N2 egl-19
+    # inputDataAll = cp.append(inputDataAllN2, [inputDataAllEgl19]*len(responseDataAllEgl19), axis=0)
+    # responseDataAll = cp.append(responseDataAllN2, responseDataAllEgl19, axis=0)
+    # inputDataTest = cp.append(inputDataTestN2, [inputDataAllEgl19], axis=0)
+    # responseMean = cp.append(responseMeanN2, [responseMeanEgl19], axis=0)
+    # responseStdError = cp.append(responseStdErrorN2, [responseStdErrorEgl19], axis=0)
+    # # N2 egl-19その2
+    inputDataAll = cp.append([inputDataAllN2]*len(responseDataAllN2), [inputDataAllEgl19]*len(responseDataAllEgl19), axis=0)
+    responseDataAll = cp.append(responseDataAllN2, responseDataAllEgl19, axis=0)
+    inputDataTest = cp.append([inputDataAllN2], [inputDataAllEgl19], axis=0)
+    responseMean = cp.append([responseMeanN2], [responseMeanEgl19], axis=0)
+    responseStdError = cp.append([responseStdErrorN2], [responseStdErrorEgl19], axis=0)
+
 
     # データセット作成
     ### readJsonProcess用
@@ -604,12 +687,16 @@ def main():
     # trainGT = cp.array(responseData * 100 - 99)
     # testInput = cp.array(inputData + BIAS)
     # testGT = cp.array(responseMean * 100 - 99)
-    ### readJsonAll用
+    # ### readJsonAll用
+    # trainInput = cp.array([inputData + BIAS for inputData in inputDataAll])
+    # trainGT = cp.array(responseDataAll * 100 - 99)
+    # testInput = cp.array(inputDataTest + BIAS)
+    # testGT = cp.array(responseMean * 100 - 99)
+    ### readJsonAllUnveiled3用
     trainInput = cp.array([inputData + BIAS for inputData in inputDataAll])
     trainGT = cp.array(responseDataAll * 100 - 99)
-    testInput = cp.array(inputDataTest + BIAS)
-    testGT = cp.array(responseMean * 100 - 99)
-
+    testInput = cp.array([iDataTest + BIAS for iDataTest in inputDataTest])
+    testGT = cp.array([rMean * 100 - 99 for rMean in responseMean])
 
     return resMode, trainInput, trainGT, testInput, testGT, transLen
 
@@ -623,30 +710,33 @@ def main():
 # メイン関数
 if __name__ == "__main__":
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 
     # tqdmの表示を抑制
     from functools import partialmethod
     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
     args = getArg()
-    resMode, trainInput, trainGT, testInput, testGT, transLen = main()
+    resMode, trainInput, trainGT, testInput, testGT, transLen = dataset()
 
     # study = optuna.create_study(sampler=optuna.samplers.GPSampler(n_startup_trials=10))
     study = optuna.create_study(
-        study_name="reproduct_sample07", 
-        storage="mysql://ishibashi@127.0.0.1/ishibashi_optuna_01",
+        study_name=args.study_name, 
+        storage=args.storage,
         # sampler=optuna.samplers.GPSampler(n_startup_trials=10),
+        # sampler=optuna.samplers.NSGAIISampler(),
+        # sampler=optuna.samplers.TPESampler(),
+        # directions=["minimize", "minimize"],
         load_if_exists=True,
     )
     # study.optimize(Objective(resMode, trainInput, trainGT, testInput, testGT, transLen), n_trials=10)
-    study.optimize(Objective(resMode, trainInput, trainGT, testInput, testGT, transLen), n_trials=100)
+    study.optimize(Objective(resMode, trainInput, trainGT, testInput, testGT, transLen), n_trials=200)
 
-    best_params = study.best_params
-    found_nodeNum = best_params["nodeNum"]
-    found_leaking_rate = best_params["leaking_rate"]
-    found_tikhonov_beta = best_params["tikhonov_beta"]
+    # best_params = study.best_params
+    # found_nodeNum = best_params["nodeNum"]
+    # found_leaking_rate = best_params["leaking_rate"]
+    # found_tikhonov_beta = best_params["tikhonov_beta"]
     
-    best_value = study.best_value
+    # best_value = study.best_value
 
     # print(f"Found nodeNum: {found_nodeNum}, Found leaking rate:{found_leaking_rate}, Found tikhonov beta : {found_tikhonov_beta}, value : {best_value}")
