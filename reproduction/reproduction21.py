@@ -456,7 +456,68 @@ def main():
     # inputData, responseData, responseMean, responseStdError = rj.readJsonProcess(jsonFname, "p1", stim)
     # inputData, responseData, responseMean, responseStdError = rj.readJsonRawUnveiled(jsonFname, "p3", stim, type="N2", target="paQuasAr3")
     # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAll(jsonFname, "p1", stim, seed=801)
-    inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled2(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+    # inputDataAll, responseDataAll, inputDataTest, responseMean, responseStdError = rj.readJsonAllUnveiled4("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig1D.json", "p2", stim, type="N2", target="paQuasAr3")
+
+
+    # N2とEgl-19
+    if stim == "egl19":
+        # inputDataAllN2, responseDataAllN2, responseMeanN2, responseStdErrorN2 = rj.readJsonRawUnveiled(jsonFname, "p2", "-6", "N2", "paQuasAr3")
+        # inputDataAllN2, responseDataAllN2, inputDataTestN2, responseMeanN2, responseStdErrorN2 = rj.readJsonAllUnveiled(jsonFname,"p2", "-6", type="N2", target="paQuasAr3")
+        inputDataAllN2, responseDataAllN2, responseMeanN2, responseStdErrorN2 = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "N2", "paQuasAr3")
+        inputDataAllEgl19, responseDataAllEgl19, responseMeanEgl19, responseStdErrorEgl19 = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "egl-19", "paQuasAr3")
+
+        # くっつける
+        # N2 egl-19
+        inputDataAll = cp.append([inputDataAllN2]*len(responseDataAllN2), [inputDataAllEgl19]*len(responseDataAllEgl19), axis=0)
+        responseDataAll = cp.append(responseDataAllN2, responseDataAllEgl19, axis=0)
+        inputDataTest = inputDataAllEgl19
+        responseMean = responseMeanEgl19
+        responseStdError = responseStdErrorEgl19
+    else:
+        # inputDataAllN2, responseDataAllN2, inputDataTestN2, responseMeanN2, responseStdErrorN2 = rj.readJsonAllUnveiled(jsonFname,"p2", stim, type="N2", target="paQuasAr3")
+        inputDataAllN2, responseDataAllN2, responseMeanN2, responseStdErrorN2 = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "N2", "paQuasAr3")
+        inputDataAllEgl19, responseDataAllEgl19, responseMeanEgl19, responseStdErrorEgl19 = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "egl-19", "paQuasAr3")
+
+        # くっつける
+        # N2 egl-19
+        inputDataAll = cp.append([inputDataAllN2]*len(responseDataAllN2), [inputDataAllEgl19]*len(responseDataAllEgl19), axis=0)
+        responseDataAll = cp.append(responseDataAllN2, responseDataAllEgl19, axis=0)
+        inputDataTest = inputDataAllN2
+        responseMean = responseMeanN2
+        responseStdError = responseStdErrorN2
+
+
+
+    # testデータを用意する
+    testInputDict = {}; testGTDict = {}; responseStdErrorDict = {}
+    # for st in ["-5", "-6", "-7", "-8", "-9"]:
+    for st in ["-6", "egl19"]:
+        if not st == "egl19":
+            # _, _, inputDataTestTmp, responseMeanTmp, responseStdErrorTmp = rj.readJsonAllUnveiled(jsonFname,"p2", st, type="N2", target="paQuasAr3")
+            # inputDataTestTmp, _, responseMeanTmp, responseStdErrorTmp = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig1D.json", "p2", st, "N2", "paQuasAr3")
+            inputDataTestTmp, _, responseMeanTmp, responseStdErrorTmp = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "N2", "paQuasAr3")
+        else:
+            inputDataTestTmp, _, responseMeanTmp, responseStdErrorTmp = rj.readJsonRawUnveiled("/home/ishibashi/Reservoir_ESN/input/data_unveiled_fig4_A.json", "p2", "-6", "egl-19", "paQuasAr3")
+        # 前処理
+        testInputTmp = cp.array(inputDataTestTmp + BIAS)
+        testGTTmp = cp.array(responseMeanTmp * 100 - 99)
+
+        # データの辞書作成
+        testInputDict[st] = testInputTmp
+        testGTDict[st] = testGTTmp
+        responseStdErrorDict[st] = responseStdErrorTmp
+
+
+    # データセット作成
+    # ### readJsonAllUnveiled3用
+    # trainInput = cp.array([inputData + BIAS for inputData in inputDataAll])
+    # trainGT = cp.array(responseDataAll * 100 - 99)
+    # testInput = cp.array([iDataTest + BIAS for iDataTest in inputDataTest])
+    # testGT = cp.array([rMean * 100 - 99 for rMean in responseMean])
+
+
 
     # データセット作成
     ### readJsonProcess用
